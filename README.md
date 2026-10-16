@@ -1,0 +1,2 @@
+# VK Group Auto posting
+

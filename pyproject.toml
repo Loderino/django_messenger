@@ -1,9 +1,5 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "Django-messenger"
+name = "django-messenger"
 version = "0.0.0"
 description = ""
 readme = "README.md"
@@ -16,6 +12,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "django>=6.1.2",
+    "python-dotenv>=1.2.4",
 ]
 
 [dependency-groups]
@@ -25,11 +23,6 @@ dev = [
     "pytest>=9.1.1",
     "ty>=0.0.89",
 ]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["*"]
-exclude = ["tests*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -53,12 +46,13 @@ combine-as-imports = true
 quote-style = "double"
 indent-style = "space"
 
-[tool.ty]
-src = ["src", "tests"]
+[tool.ty.src]
+include = ["."]
 exclude = [
     "**/.*",
     ".venv",
     "**/__pycache__",
     "dist",
     "build",
+    "**/migrations",
 ]

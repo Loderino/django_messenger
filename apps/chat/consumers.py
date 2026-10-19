@@ -4,7 +4,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .events import WSCloseCode, WSEvent
-from .models import Membership
+from .models import Chat, Membership
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -27,7 +27,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def check_membership(self):
-        return Membership.objects.filter(chat_id=self.chat_id, user=self.user).exists()
+        try:
+            chat = Chat.objects.get(id=self.chat_id)
+        except Chat.DoesNotExist:
+            return False
+
+        if chat.type == Chat.Type.TOPIC:
+            if not chat.parent:
+                return False
+            return Membership.objects.filter(chat=chat.parent, user=self.user).exists()
+        return Membership.objects.filter(chat=chat, user=self.user).exists()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)

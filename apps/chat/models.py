@@ -7,6 +7,20 @@ from django.db import models
 from .managers import ActiveMessageManager
 
 
+class ChatQuerySet(models.QuerySet):
+    def active(self):
+        """Returns not deleted chats only."""
+        return self.filter(deleted_at__isnull=True)
+
+    def for_user(self, user):
+        """Returns only chats where user is a member."""
+        return self.active().filter(memberships__user=user)
+
+    def public(self):
+        """Returns only public chats."""
+        return self.active().exclude(type__in=[Chat.Type.DIRECT, Chat.Type.TOPIC])
+
+
 class Chat(models.Model):
     class Type(models.TextChoices):
         DIRECT = "DIRECT", "Private dialog"
@@ -18,6 +32,8 @@ class Chat(models.Model):
     title = models.CharField(max_length=100, blank=True)
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="topics")
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    objects = ChatQuerySet.as_manager()
 
     def __str__(self):
         if self.type == self.Type.TOPIC and self.parent:

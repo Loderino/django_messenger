@@ -3,6 +3,7 @@ from typing import ClassVar
 from django.utils import timezone
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import CursorPagination
 from rest_framework.response import Response
 
@@ -60,7 +61,7 @@ class MessageViewSet(
         chat = serializer.validated_data["chat"]
 
         if not Membership.objects.filter(chat=chat, user=self.request.user).exists():
-            raise permissions.PermissionDenied("You are not a member of this chat.")
+            raise PermissionDenied("You are not a member of this chat.")
 
         serializer.save(sender=self.request.user)
 
@@ -68,18 +69,18 @@ class MessageViewSet(
         instance = serializer.instance
 
         if instance.deleted_at:
-            raise permissions.PermissionDenied("You can't update deleted messages.")
+            raise PermissionDenied("You can't update deleted messages.")
 
         if instance.sender != self.request.user:
-            raise permissions.PermissionDenied("You can only update your own messages.")
+            raise PermissionDenied("You can only update your own messages.")
 
         if timezone.now() - instance.created_at >= timezone.timedelta(minutes=30):
-            raise permissions.PermissionDenied("You can't update old messages.")
+            raise PermissionDenied("You can't update old messages.")
         serializer.save(updated_at=timezone.now())
 
     def perform_destroy(self, instance):
         if instance.sender != self.request.user:
-            raise permissions.PermissionDenied("You can only delete your own messages.")
+            raise PermissionDenied("You can only delete your own messages.")
 
         instance.deleted_at = timezone.now()
         instance.save()

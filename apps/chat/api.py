@@ -5,6 +5,8 @@ from channels.layers import get_channel_layer
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -152,6 +154,7 @@ class ChatViewSet(viewsets.ModelViewSet):
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
 
+    @extend_schema(request=None)
     @action(detail=True, methods=["post"], serializer_class=None)
     def join(self, request, pk=None):
         chat = self.get_object()
@@ -166,6 +169,7 @@ class ChatViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": "Successfully joined the chat."}, status=status.HTTP_201_CREATED)
 
+    @extend_schema(request=None)
     @action(detail=True, methods=["post"], serializer_class=None)
     def leave(self, request, pk=None):
         chat = self.get_object()
@@ -187,6 +191,13 @@ class ChatViewSet(viewsets.ModelViewSet):
         membership.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="q", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="Search query string"
+            )
+        ]
+    )
     @action(detail=False, methods=["get"])
     def search(self, request):
         query = request.query_params.get("q", "").strip()

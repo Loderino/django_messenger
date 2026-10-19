@@ -1,5 +1,7 @@
 from typing import ClassVar
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.utils import timezone
 from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
@@ -63,7 +65,20 @@ class MessageViewSet(
         if not Membership.objects.filter(chat=chat, user=self.request.user).exists():
             raise PermissionDenied("You are not a member of this chat.")
 
-        serializer.save(sender=self.request.user)
+        message = serializer.save(sender=self.request.user)
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{message.chat_id}",
+            {
+                "type": "chat_message",
+                "message": {
+                    "id": message.id,
+                    "text": message.text,
+                    "sender_name": message.sender.display_name or message.sender.username,
+                    "created_at": message.created_at.isoformat(),
+                },
+            },
+        )
 
     def perform_update(self, serializer):
         instance = serializer.instance

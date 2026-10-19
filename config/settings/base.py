@@ -14,12 +14,14 @@ MEDIA_ROOT = DATA_DIR / "media"
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "channels",
     "rest_framework",
     "drf_spectacular",
     "apps.users.apps.UsersConfig",
@@ -54,6 +56,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -100,5 +103,19 @@ SPECTACULAR_SETTINGS = {
                 "name": "sessionid",
             }
         }
+    },
+}
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                {
+                    "address": f"redis://{os.environ['REDIS_HOST']}:{os.environ.get('REDIS_PORT', '6379')}/0",
+                    "socket_timeout": 30,
+                }
+            ],
+        },
     },
 }

@@ -33,15 +33,12 @@ class ChatViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.action == "join":
-            return Chat.objects.public()
-
-        if self.action == "leave":
-            return Chat.objects.for_user(self.request.user)
+            return Chat.objects.active()
 
         if self.action == "search":
             return Chat.objects.public()
 
-        return Chat.objects.for_user(self.request.user)
+        return Chat.objects.for_user_with_topics(self.request.user)
 
     def get_serializer_class(self):
         if self.action == "direct":
@@ -161,6 +158,9 @@ class ChatViewSet(viewsets.ModelViewSet):
 
         if chat.type == Chat.Type.DIRECT:
             raise PermissionDenied("You cannot join a direct chat.")
+
+        if chat.type == Chat.Type.TOPIC:
+            raise ValidationError("You cannot join a topic directly. You must join the parent chat.")
 
         if Membership.objects.filter(chat=chat, user=request.user).exists():
             return Response({"detail": "You are already a member."}, status=status.HTTP_400_BAD_REQUEST)

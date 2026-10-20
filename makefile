@@ -37,7 +37,7 @@ run:
 	uv run python manage.py runserver --settings=config.settings.dev
 
 test:
-	uv run pytest
+	uv run pytest -n auto
 
 lint:
 	uv run ruff check .

@@ -24,15 +24,41 @@ def other_user(db):
 
 
 @pytest.fixture
-def auth_client(api_client, user):
+def auth_client(user):
     """Client authorized as `user`."""
-    api_client.force_authenticate(user=user)
-    return api_client
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
 
 
 @pytest.fixture
-def chat_with_user(db, user):
-    """Chat for users."""
-    chat = Chat.objects.create(type=Chat.Type.GROUP, title="Test Chat")
+def other_auth_client(other_user):
+    """Client authorized as `other_user`."""
+    client = APIClient()
+    client.force_authenticate(user=other_user)
+    return client
+
+
+@pytest.fixture
+def group_chat_with_user(db, user):
+    """test_group"""
+    chat = Chat.objects.create(type=Chat.Type.GROUP, title="Test Group Chat")
     Membership.objects.create(chat=chat, user=user, role=Membership.Role.OWNER)
+    return chat
+
+
+@pytest.fixture
+def channel_chat_with_user(db, user):
+    """test_channel"""
+    chat = Chat.objects.create(type=Chat.Type.CHANNEL, title="Test Channel Chat")
+    Membership.objects.create(chat=chat, user=user, role=Membership.Role.OWNER)
+    return chat
+
+
+@pytest.fixture
+def direct_chat_with_user_and_other(db, user, other_user):
+    """test_direct"""
+    chat = Chat.objects.create(type=Chat.Type.DIRECT)
+    Membership.objects.create(chat=chat, user=user, role=Membership.Role.ADMIN)
+    Membership.objects.create(chat=chat, user=other_user, role=Membership.Role.ADMIN)
     return chat

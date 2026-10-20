@@ -3,6 +3,7 @@ from typing import ClassVar
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 
 from .managers import ActiveMessageManager
 
@@ -15,6 +16,10 @@ class ChatQuerySet(models.QuerySet):
     def for_user(self, user):
         """Returns only chats where user is a member."""
         return self.active().filter(memberships__user=user)
+
+    def for_user_with_topics(self, user):
+        """Returns only chats where user is a member. Includes topics where user is a member."""
+        return self.active().filter(Q(memberships__user=user) | Q(parent__memberships__user=user)).distinct()
 
     def public(self):
         """Returns only public chats."""

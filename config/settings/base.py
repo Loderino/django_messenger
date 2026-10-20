@@ -76,6 +76,11 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
+ACCOUNT_LOGIN_METHODS = {"username"}
+ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_PROVIDERS = {}
+
 SITE_ID = 1
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% load allauth account %}
+
+{% block title %}Вход — Лосёво{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .auth-card {
+        background: var(--sidebar-bg);
+        color: var(--text-main);
+        padding: 35px 40px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 480px;
+        position: relative;
+    }
+
+    .theme-toggle-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: transparent;
+        border: none;
+        color: var(--text-main);
+        font-size: 20px;
+        cursor: pointer;
+        opacity: 0.6;
+        transition: 0.2s;
+    }
+    .theme-toggle-btn:hover {
+        opacity: 1;
+    }
+
+    .logo-text {
+        font-weight: 800;
+        font-size: 28px;
+        color: var(--vk-blue);
+        text-align: center;
+        margin-bottom: 20px;
+        letter-spacing: -1px;
+    }
+
+    .vk-btn {
+        background-color: var(--vk-blue);
+        color: white;
+        border-radius: 2px;
+        padding: 10px;
+        font-size: 16px;
+        border: none;
+        width: 100%;
+    }
+    .vk-btn:hover { background-color: #36638e; color: white;}
+
+    .form-control {
+        border-radius: 2px;
+        border: 1px solid var(--vk-border);
+        background-color: var(--sidebar-bg);
+        color: var(--text-main);
+        padding: 10px 12px;
+    }
+    .form-control:focus {
+        border-color: var(--vk-blue);
+        box-shadow: none;
+        outline: none;
+        background-color: var(--sidebar-bg);
+        color: var(--text-main);
+    }
+
+    .alt-methods {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid var(--vk-border);
+    }
+    .alt-methods-title {
+        text-align: center;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .method-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 9px;
+        margin-bottom: 8px;
+        background-color: var(--active-chat-bg);
+        border: 1px solid var(--vk-border);
+        border-radius: 2px;
+        color: var(--text-main);
+        font-size: 14px;
+        text-decoration: none;
+        cursor: not-allowed;
+        opacity: 0.7;
+        transition: 0.2s;
+    }
+    .method-btn.active-method {
+        cursor: pointer;
+        opacity: 1;
+    }
+    .method-btn.active-method:hover {
+        filter: brightness(0.95);
+    }
+
+    .oauth-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .oauth-grid .method-btn {
+        margin-bottom: 0;
+    }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active{
+        -webkit-box-shadow: 0 0 0 30px var(--sidebar-bg) inset !important;
+        -webkit-text-fill-color: var(--text-main) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+
+        <button class="theme-toggle-btn" onclick="toggleTheme()" title="Сменить тему">
+            <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+        </button>
+
+        <div class="logo-text">Лосёво</div>
+
+        <form method="post" action="{% url 'account_login' %}">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger p-2" style="font-size: 14px; border-radius: 2px;">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label for="id_login" class="form-label">Логин</label>
+                <input type="text" name="login" class="form-control" id="id_login" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="id_password" class="form-label">Пароль</label>
+                <input type="password" name="password" class="form-control" id="id_password" required>
+            </div>
+
+            <button type="submit" class="btn vk-btn mb-2">Войти</button>
+        </form>
+
+        <div class="text-center mb-3">
+            <a href="{% url 'account_signup' %}" style="color: var(--vk-blue); text-decoration: none; font-size: 14px;">Еще не с нами? Зарегистрироваться</a>
+        </div>
+
+        <div class="alt-methods">
+            <div class="alt-methods-title">Другие способы</div>
+
+            <a href="#" class="method-btn active-method" title="Войти по паролю">
+                <i class="bi bi-key"></i> Логин и пароль
+            </a>
+            <button class="method-btn" disabled>
+                <i class="bi bi-envelope"></i> Электронная почта (скоро)
+            </button>
+            <button class="method-btn" disabled>
+                <i class="bi bi-qr-code"></i> QR-код (скоро)
+            </button>
+        </div>
+
+        <div class="alt-methods">
+            <div class="alt-methods-title">Войти с помощью</div>
+
+            <div class="oauth-grid">
+                <button class="method-btn" disabled title="Скоро">
+                    <i class="bi bi-google" style="color: #DB4437;"></i> Google
+                </button>
+                <button class="method-btn" disabled title="Скоро">
+                    <i class="bi bi-github" style="color: #333;"></i> GitHub
+                </button>
+                <button class="method-btn" disabled title="Скоро">
+                    <i class="bi bi-telegram" style="color: #0088cc;"></i> Telegram
+                </button>
+                <button class="method-btn" disabled title="Скоро">
+                    <i class="bi bi-discord" style="color: #5865F2;"></i> Discord
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

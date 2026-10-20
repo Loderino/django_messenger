@@ -237,7 +237,11 @@ class MessageViewSet(
     def perform_create(self, serializer):
         chat = serializer.validated_data["chat"]
 
-        if not Membership.objects.filter(chat=chat, user=self.request.user).exists():
+        is_member = Membership.objects.filter(
+            Q(chat=chat, user=self.request.user) | Q(chat=chat.parent, user=self.request.user)
+        ).exists()
+
+        if not is_member:
             raise PermissionDenied("You are not a member of this chat.")
 
         message = serializer.save(sender=self.request.user)

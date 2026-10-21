@@ -45,7 +45,7 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields: ClassVar[list[str]] = ["id", "sender", "created_at", "updated_at"]
 
     def get_sender_name(self, obj):
-        return obj.sender.display_name or obj.sender.username
+        return obj.sender.public_name
 
 
 class MessageCreateSerializer(MessageSerializer):
@@ -68,4 +68,4 @@ class MembershipSerializer(serializers.ModelSerializer):
         read_only_fields: ClassVar[list[str]] = ["id", "joined_at"]
 
     def get_user_name(self, obj):
-        return obj.user.display_name or obj.user.username
+        return obj.user.public_name

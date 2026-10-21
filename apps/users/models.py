@@ -23,3 +23,8 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.display_name or self.username
+
+    @property
+    def public_name(self):
+        """Returns display_name, if it exists, username otherwise."""
+        return self.display_name or self.username

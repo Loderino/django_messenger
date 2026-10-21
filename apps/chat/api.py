@@ -52,6 +52,8 @@ class ChatViewSet(viewsets.ModelViewSet):
         if chat_type == Chat.Type.DIRECT:
             raise ValidationError({"type": "Cannot create DIRECT chat here. Use POST /api/chats/direct/ instead."})
 
+        channel_layer = get_channel_layer()
+
         if chat_type == Chat.Type.TOPIC:
             parent = serializer.validated_data.get("parent")
             is_admin = parent.memberships.filter(
@@ -62,8 +64,6 @@ class ChatViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("Only admins or owners can create topics.")
 
             chat = serializer.save()
-
-            channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
                 f"chat_{parent.id}",
                 {
@@ -89,6 +89,14 @@ class ChatViewSet(viewsets.ModelViewSet):
         chat = serializer.save()
         Membership.objects.create(chat=chat, user=self.request.user, role=Membership.Role.OWNER)
 
+        async_to_sync(channel_layer.group_send)(
+            f"user_{self.request.user.id}",
+            {
+                "type": "join_chat_group",
+                "payload": {"chat_id": chat.id},
+            },
+        )
+
     def perform_destroy(self, instance):
         if instance.type == Chat.Type.DIRECT:
             raise PermissionDenied("You cannot delete a direct chat.")
@@ -109,6 +117,11 @@ class ChatViewSet(viewsets.ModelViewSet):
 
         instance.deleted_at = timezone.now()
         instance.save()
+
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{instance.id}", {"type": "chat_deleted", "payload": {"chat_id": instance.id}}
+        )
 
     def perform_update(self, serializer):
         chat = serializer.instance

@@ -13,6 +13,7 @@ class WSEvent(StrEnum):
 
     CHAT_DIRECT_CREATED = "chat.direct.created"
     CHAT_TOPIC_CREATED = "chat.topic.created"
+    CHAT_STATE_DELETED = "chat.state.deleted"
 
     CHAT_MEMBER_JOINED = "chat.member.joined"
     CHAT_MEMBER_LEFT = "chat.member.left"

@@ -253,7 +253,8 @@ class MessageViewSet(
                 "message": {
                     "id": message.id,
                     "text": message.text,
-                    "sender_name": message.sender.display_name or message.sender.username,
+                    "sender_name": message.sender.public_name,
+                    "sender_avatar": message.sender.avatar_url,
                     "created_at": message.created_at.isoformat(),
                 },
             },

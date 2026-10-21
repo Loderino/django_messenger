@@ -30,5 +30,13 @@ class UserViewSet(viewsets.GenericViewSet):
             id=request.user.id
         )[:10]
 
-        data = [{"id": u.id, "public_name": u.public_name} for u in users]
+        data = [
+            {
+                "id": u.id,
+                "public_name": u.public_name,
+                "username": u.username,
+                "avatar_url": u.avatar_url,
+            }
+            for u in users
+        ]
         return Response(data)

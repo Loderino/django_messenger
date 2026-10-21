@@ -28,3 +28,9 @@ class User(AbstractUser):
     def public_name(self):
         """Returns display_name, if it exists, username otherwise."""
         return self.display_name or self.username
+
+    @property
+    def avatar_url(self):
+        if self.avatar:
+            return self.avatar.url
+        return "/static/images/avatars/default.jpg"

@@ -36,9 +36,9 @@
     }
 
     .vk-logo img {
-        height: 40px; /* Логотип чуть меньше шапки */
+        height: 40px;
         width: auto;
-        object-fit: contain; /* Сохраняем пропорции */
+        object-fit: contain;
     }
 
     .vk-search { background: rgba(255,255,255,0.2); border: none; border-radius: 2px; padding: 6px 12px; color: white; width: 280px; font-size: 14px; }
@@ -140,6 +140,7 @@
         width: 48px; height: 48px; border-radius: 2px;
         display: flex; justify-content: center; align-items: center;
         font-weight: 600; font-size: 18px; flex-shrink: 0; color: white;
+        object-fit: cover; /* Важно для картинок */
     }
 
     /* --- ОКНО ЧАТА --- */
@@ -162,6 +163,7 @@
         width: 36px; height: 36px; border-radius: 2px; margin-right: 12px;
         flex-shrink: 0; display: flex; justify-content: center; align-items: center;
         color: white; font-weight: 600; font-size: 14px;
+        object-fit: cover; /* Важно для картинок */
     }
     .message-content { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; }
     .message-header { display: flex; align-items: baseline; margin-bottom: 2px; }
@@ -275,7 +277,11 @@
                 <div class="list-group list-group-flush overflow-auto" id="chat-list">
                     {% for chat in chats %}
                         <a href="#" class="list-group-item list-group-item-action chat-item" data-chat-id="{{ chat.id }}">
-                            <div class="vk-avatar bg-primary">{{ chat.first_letter }}</div>
+                            {% if chat.avatar_url %}
+                                <img src="{{ chat.avatar_url }}" class="vk-avatar">
+                            {% else %}
+                                <div class="vk-avatar bg-primary">{{ chat.first_letter }}</div>
+                            {% endif %}
                             <div class="flex-grow-1 min-w-0">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="fw-bold text-truncate" style="font-size: 15px;">{{ chat.display_title }}</span>
@@ -446,13 +452,11 @@
     });
 
     function createMessageHTML(msg) {
-        const isOwn = msg.sender_name === currentUser;
-        const avatarBg = isOwn ? 'bg-secondary' : 'bg-primary';
         const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
         return `
             <div class="message-row">
-                <div class="message-avatar ${avatarBg}">${msg.sender_name[0].toUpperCase()}</div>
+                <img src="${msg.sender_avatar}" class="message-avatar">
                 <div class="message-content">
                     <div class="message-header"><span class="message-author">${msg.sender_name}</span></div>
                     <div class="message-body">
@@ -612,7 +616,7 @@
             div.className = 'list-group-item';
             div.style.cursor = 'pointer';
             div.innerHTML = `
-                <div class="vk-avatar bg-primary" style="width: 36px; height: 36px; font-size: 14px;">${user.public_name[0].toUpperCase()}</div>
+                <img src="${user.avatar_url}" class="vk-avatar" style="width: 36px; height: 36px;">
                 <div>
                     <div class="fw-bold">${user.public_name}</div>
                     <small class="text-muted">@${user.username}</small>
@@ -659,8 +663,12 @@
 
     function openProfileModal(user) {
         selectedUser = user;
-        modalAvatar.innerHTML = `<div class="online-dot"></div>`;
-        modalAvatar.insertAdjacentText('afterbegin', user.public_name[0].toUpperCase());
+
+        // Устанавливаем картинку
+        modalAvatar.innerHTML = `
+            <img src="${user.avatar_url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+            <div class="online-dot"></div>
+        `;
 
         modalName.innerText = user.public_name;
         modalUsername.innerText = `@${user.username}`;
@@ -709,7 +717,7 @@
                     a.className = 'list-group-item list-group-item-action chat-item';
                     a.setAttribute('data-chat-id', chat.id);
                     a.innerHTML = `
-                        <div class="vk-avatar bg-primary">${user.public_name[0].toUpperCase()}</div>
+                        <img src="${user.avatar_url}" class="vk-avatar">
                         <div class="flex-grow-1 min-w-0">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold text-truncate" style="font-size: 15px;">${user.public_name}</span>

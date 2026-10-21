@@ -11,6 +11,12 @@ def index(request):
 
     for chat in chats:
         display_title = chat.get_display_title(request.user)
+        avatar_url = None
+
+        if chat.type == Chat.Type.DIRECT:
+            other_member = chat.memberships.exclude(user=request.user).first()
+            if other_member:
+                avatar_url = other_member.user.avatar_url
 
         chats_data.append(
             {
@@ -18,10 +24,8 @@ def index(request):
                 "type_display": chat.get_type_display(),
                 "display_title": display_title,
                 "first_letter": display_title[0].upper() if display_title else "?",
+                "avatar_url": avatar_url,
             }
         )
 
-    context = {
-        "chats": chats_data,
-    }
-    return render(request, "chat/index.html", context)
+    return render(request, "chat/index.html", {"chats": chats_data})

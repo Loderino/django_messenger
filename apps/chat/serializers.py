@@ -46,14 +46,27 @@ class DirectChatCreateSerializer(serializers.Serializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
+    sender_avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields: ClassVar[list[str]] = ["id", "chat", "sender", "sender_name", "text", "created_at", "updated_at"]
+        fields: ClassVar[list[str]] = [
+            "id",
+            "chat",
+            "sender",
+            "sender_name",
+            "sender_avatar",
+            "text",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields: ClassVar[list[str]] = ["id", "sender", "created_at", "updated_at"]
 
     def get_sender_name(self, obj):
         return obj.sender.public_name
+
+    def get_sender_avatar(self, obj):
+        return obj.sender.avatar_url
 
 
 class MessageCreateSerializer(MessageSerializer):

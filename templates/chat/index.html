@@ -8,7 +8,7 @@
     /* --- ТОП-БАР --- */
     .vk-topbar {
         background-color: var(--vk-blue);
-        height: 48px;
+        height: 60px;
         display: flex;
         align-items: center;
         padding: 0 20px;
@@ -23,7 +23,24 @@
         display: flex;
         align-items: center;
     }
-    .vk-logo { font-weight: 600; font-size: 18px; margin-right: 30px; display: flex; align-items: center; gap: 8px; }
+
+    .vk-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-right: 30px;
+        font-weight: 700;
+        font-size: 22px;
+        text-decoration: none;
+        color: white;
+    }
+
+    .vk-logo img {
+        height: 40px; /* Логотип чуть меньше шапки */
+        width: auto;
+        object-fit: contain; /* Сохраняем пропорции */
+    }
+
     .vk-search { background: rgba(255,255,255,0.2); border: none; border-radius: 2px; padding: 6px 12px; color: white; width: 280px; font-size: 14px; }
     .vk-search::placeholder { color: rgba(255,255,255,0.7); }
 
@@ -211,22 +228,29 @@
 {% block content %}
     <div class="vk-topbar">
         <div class="topbar-inner">
-            <div class="vk-logo"><i class="bi bi-chat-fill"></i> Лосёво</div>
+
+            <a href="/" class="vk-logo">
+                <img src="{% static 'images/logos/logo.png' %}">
+                <span>Лосёво</span>
+            </a>
+
             <input type="text" class="vk-search" placeholder="Поиск...">
+
             <div class="ms-auto d-flex align-items-center gap-3">
                 <button class="btn btn-sm btn-outline-light border-0" onclick="toggleTheme()" title="Сменить тему">
                     <i class="bi bi-moon-stars-fill fs-5" id="themeIcon"></i>
                 </button>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="fw-medium" style="font-size: 14px;">{{ request.user.public_name }}</span>
+                    <span class="fw-medium" style="font-size: 15px;">{{ request.user.public_name }}</span>
                     <form method="post" action="{% url 'account_logout' %}" style="margin: 0;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-light border-0" title="Выйти">
-                            <i class="bi bi-box-arrow-right"></i>
+                            <i class="bi bi-box-arrow-right fs-5"></i>
                         </button>
                     </form>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -671,17 +695,12 @@
             if (response.ok) {
                 const chat = await response.json();
 
-                // Закрываем поиск, если он был открыт
                 closeSearch();
 
-                // Проверяем, есть ли этот чат уже в DOM
                 const existingChatItem = document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`);
 
                 if (!existingChatItem) {
-                    // Если чата нет в списке, добавляем его в DOM
                     const chatList = document.getElementById('chat-list');
-
-                    // Удаляем заглушку "У вас пока нет чатов", если она есть
                     const emptyState = chatList.querySelector('.p-4.text-muted');
                     if (emptyState) emptyState.remove();
 
@@ -699,7 +718,6 @@
                         </div>
                     `;
 
-                    // Добавляем обработчик клика
                     a.addEventListener('click', function(e) {
                         e.preventDefault();
                         document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
@@ -707,13 +725,9 @@
                         openChat(this.getAttribute('data-chat-id'), this.querySelector('.fw-bold').innerText.trim());
                     });
 
-                    // Вставляем в начало списка
                     chatList.insertBefore(a, chatList.firstChild);
-
-                    // Сразу открываем
                     a.click();
                 } else {
-                    // Если чат уже есть в списке, просто кликаем на него
                     existingChatItem.click();
                 }
             }
@@ -732,8 +746,6 @@
             });
 
             if (response.ok || response.status === 400) {
-                // Если вступили успешно, перезагружаем для подтягивания списка
-                // В идеале здесь тоже можно добавить в DOM без перезагрузки
                 window.location.reload();
             }
         } catch (error) {

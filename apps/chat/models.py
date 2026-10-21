@@ -55,6 +55,22 @@ class Chat(models.Model):
         if self.type in (self.Type.GROUP, self.Type.CHANNEL) and not self.title:
             raise ValidationError({"title": "Groups and channels must have a title."})
 
+    def get_display_title(self, user):
+        """
+        Returns display title for chat.
+        For direct chats returns name of other user.
+        """
+        if self.title:
+            return self.title
+
+        if self.type == self.Type.DIRECT:
+            other_member = self.memberships.exclude(user=user).first()
+            if other_member:
+                return other_member.user.public_name
+            return "Удаленный пользователь"
+
+        return f"Chat #{self.pk}"
+
 
 class Membership(models.Model):
     class Role(models.TextChoices):

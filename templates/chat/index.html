@@ -50,8 +50,66 @@
     }
 
     /* --- ЛЕВАЯ ПАНЕЛЬ --- */
-    .sidebar { width: 360px; background-color: var(--sidebar-bg); display: flex; flex-direction: column; border-right: 1px solid var(--vk-border); flex-shrink: 0; }
-    .vk-panel-header { padding: 12px 16px; border-bottom: 1px solid var(--vk-border); font-weight: 600; font-size: 15px; background: var(--header-bg); }
+    .sidebar { width: 360px; background-color: var(--sidebar-bg); display: flex; flex-direction: column; border-right: 1px solid var(--vk-border); flex-shrink: 0; position: relative; }
+
+    .search-container {
+        padding: 12px 16px;
+        background-color: var(--header-bg);
+        border-bottom: 1px solid var(--vk-border);
+        z-index: 100;
+        height: 60px;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-input-wrapper {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        gap: 8px;
+        background-color: var(--active-chat-bg);
+        border: 1px solid var(--vk-border);
+        border-radius: 4px;
+        transition: border-color 0.2s;
+        cursor: text;
+        width: 100%;
+    }
+
+    .search-input-wrapper:focus-within { border-color: var(--vk-blue); }
+
+    .search-input-wrapper input {
+        border: none;
+        background: transparent;
+        color: var(--text-main);
+        font-size: 14px;
+        outline: none;
+        width: 100%;
+    }
+    .search-input-wrapper input::placeholder { color: var(--text-muted); }
+
+    .search-dropdown {
+        position: absolute;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        height: calc(100vh - 150px);
+        background: var(--sidebar-bg);
+        border-bottom: 1px solid var(--vk-border);
+        display: none;
+        flex-direction: column;
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        z-index: 99;
+    }
+
+    .search-tabs { display: flex; border-bottom: 1px solid var(--vk-border); }
+    .search-tab {
+        flex: 1; text-align: center; padding: 12px; font-size: 14px;
+        color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: 0.2s;
+    }
+    .search-tab.active { color: var(--vk-blue); font-weight: 600; border-bottom-color: var(--vk-blue); }
+    .search-results-list { flex-grow: 1; overflow-y: auto; }
+
+    /* Список чатов и результатов поиска */
     .list-group-item {
         border: none; border-bottom: 1px solid var(--vk-border); padding: 12px 16px;
         background-color: var(--sidebar-bg); color: var(--text-main);
@@ -75,17 +133,11 @@
         background-size: var(--pattern-size) var(--pattern-size);
         overflow: hidden;
     }
-    .chat-header { background-color: var(--header-bg); padding: 12px 20px; border-bottom: 1px solid var(--vk-border); display: flex; align-items: center; flex-shrink: 0; }
+    .chat-header { background-color: var(--header-bg); height: 60px; padding: 0 20px; border-bottom: 1px solid var(--vk-border); display: flex; align-items: center; flex-shrink: 0; }
 
-    .chat-messages {
-        flex-grow: 1; overflow-y: auto; padding: 16px 24px;
-        display: flex; flex-direction: column; gap: 2px;
-    }
+    .chat-messages { flex-grow: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 2px; }
 
-    .message-row {
-        display: flex; align-items: flex-start; padding: 8px 10px;
-        transition: background-color 0.15s; border-radius: 2px;
-    }
+    .message-row { display: flex; align-items: flex-start; padding: 8px 10px; transition: background-color 0.15s; border-radius: 2px; }
     .message-row:hover { background-color: rgba(0,0,0,0.03); }
     [data-bs-theme="dark"] .message-row:hover { background-color: rgba(255,255,255,0.03); }
 
@@ -102,7 +154,6 @@
     .message-text { font-size: 15px; line-height: 1.4; color: var(--text-main); word-wrap: break-word; flex-grow: 1; white-space: pre-wrap; }
     .message-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 
-    /* --- ПОЛЕ ВВОДА --- */
     .chat-footer { background-color: var(--header-bg); padding: 16px 24px; border-top: 1px solid var(--vk-border); flex-shrink: 0; }
     .vk-input-group { display: flex; gap: 8px; align-items: flex-end; }
     .vk-input-group textarea {
@@ -114,16 +165,50 @@
     .vk-btn { background-color: var(--vk-blue); color: white; border: none; border-radius: 2px; padding: 10px 20px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 15px; height: 42px; }
     .vk-btn:hover { background-color: #36638e; }
 
-    .empty-state {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        height: 100%; color: var(--text-muted);
-    }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); }
     .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+    /* Модалка профиля */
+    .profile-modal {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 2000;
+        display: none; align-items: center; justify-content: center;
+    }
+    .profile-modal-content {
+        background: var(--sidebar-bg); width: 360px; border-radius: 4px; overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; padding: 30px;
+    }
+    .profile-avatar {
+        width: 100px; height: 100px; border-radius: 4px; background: var(--vk-blue);
+        color: white; font-size: 40px; font-weight: bold; display: flex; justify-content: center; align-items: center;
+        margin: 0 auto 15px auto; position: relative;
+    }
+    /* Зеленая точка онлайна */
+    .online-dot {
+        position: absolute; bottom: -4px; right: -4px;
+        width: 24px; height: 24px; border-radius: 50%;
+        background: #4caf50; border: 4px solid var(--sidebar-bg);
+    }
+    .profile-name { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .profile-username { color: var(--text-muted); font-size: 14px; margin-bottom: 15px; }
+    .profile-status { font-size: 13px; margin-bottom: 20px; font-weight: 500; }
+    .profile-status.online { color: #4caf50; }
+
+    /* Блок "О себе" */
+    .profile-bio-block {
+        background: var(--active-chat-bg); border: 1px solid var(--vk-border); border-radius: 4px;
+        padding: 15px; margin-bottom: 20px; text-align: left;
+    }
+    .profile-bio-title {
+        font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;
+    }
+    .profile-bio-text {
+        font-size: 14px; color: var(--text-main); line-height: 1.4;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-    <!-- ТОП-БАР -->
     <div class="vk-topbar">
         <div class="topbar-inner">
             <div class="vk-logo"><i class="bi bi-chat-fill"></i> Лосёво</div>
@@ -132,8 +217,6 @@
                 <button class="btn btn-sm btn-outline-light border-0" onclick="toggleTheme()" title="Сменить тему">
                     <i class="bi bi-moon-stars-fill fs-5" id="themeIcon"></i>
                 </button>
-
-                <!-- Имя пользователя и кнопка выхода -->
                 <div class="d-flex align-items-center gap-2">
                     <span class="fw-medium" style="font-size: 14px;">{{ request.user.public_name }}</span>
                     <form method="post" action="{% url 'account_logout' %}" style="margin: 0;">
@@ -147,33 +230,33 @@
         </div>
     </div>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ -->
     <div class="main-wrapper">
         <div class="main-content">
-
-            <!-- СПИСОК ЧАТОВ -->
             <div class="sidebar">
-                <div class="vk-panel-header d-flex justify-content-between align-items-center">
-                    <span>Диалоги</span>
-                    <!-- Кнопка создания чата (Заглушка) -->
-                    <i class="bi bi-pencil-square" style="cursor: pointer;" onclick="alert('Создание чатов появится в следующем обновлении!')"></i>
+                <div class="search-container" id="search-container">
+                    <div class="search-input-wrapper">
+                        <i class="bi bi-search text-muted"></i>
+                        <input type="text" id="global-search-input" placeholder="Поиск" autocomplete="off">
+                        <i class="bi bi-x-circle-fill text-muted" id="clear-search" style="cursor: pointer; opacity: 0; transition: opacity 0.2s;"></i>
+                    </div>
+                    <div class="search-dropdown" id="search-dropdown">
+                        <div class="search-tabs">
+                            <div class="search-tab active" id="tab-users" onclick="switchSearchTab('users')">Люди</div>
+                            <div class="search-tab" id="tab-chats" onclick="switchSearchTab('chats')">Чаты</div>
+                        </div>
+                        <div class="search-results-list" id="search-results"></div>
+                    </div>
                 </div>
 
                 <div class="list-group list-group-flush overflow-auto" id="chat-list">
                     {% for chat in chats %}
                         <a href="#" class="list-group-item list-group-item-action chat-item" data-chat-id="{{ chat.id }}">
-                            <div class="vk-avatar bg-primary">
-                                {{ chat.first_letter }}
-                            </div>
+                            <div class="vk-avatar bg-primary">{{ chat.first_letter }}</div>
                             <div class="flex-grow-1 min-w-0">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold text-truncate" style="font-size: 15px;">
-                                        {{ chat.display_title }}
-                                    </span>
+                                    <span class="fw-bold text-truncate" style="font-size: 15px;">{{ chat.display_title }}</span>
                                 </div>
-                                <small class="text-muted text-truncate d-block" style="font-size: 13px;">
-                                    {{ chat.type_display }}
-                                </small>
+                                <small class="text-muted text-truncate d-block" style="font-size: 13px;">{{ chat.type_display }}</small>
                             </div>
                         </a>
                     {% empty %}
@@ -182,43 +265,48 @@
                 </div>
             </div>
 
-            <!-- ОКНО ЧАТА -->
             <div class="chat-area" id="chat-area">
-
                 <div class="empty-state" id="empty-state">
                     <i class="bi bi-chat-square-text"></i>
                     <h5>Выберите чат</h5>
-                    <p class="mb-0">Чтобы начать общение, выберите диалог слева</p>
                 </div>
-
                 <div id="active-chat-wrapper" style="display: none; flex-direction: column; height: 100%;">
-
                     <div class="chat-header" id="active-chat-header">
                         <div class="fw-bold" style="font-size: 16px;" id="active-chat-title">Загрузка...</div>
                     </div>
-
-                    <div class="chat-messages" id="messages-container">
-                        <!-- Сообщения -->
-                    </div>
-
+                    <div class="chat-messages" id="messages-container"></div>
                     <div class="chat-footer">
                         <div class="vk-input-group">
                             <button class="vk-btn" style="background: transparent; color: var(--vk-blue); border: 1px solid var(--vk-border); padding: 0 16px; height: 42px;">
                                 <i class="bi bi-paperclip fs-5"></i>
                             </button>
-                            <textarea id="message-input" rows="1"
-                                placeholder="Напишите сообщение... (Shift+Enter для переноса)"
-                                autocomplete="off"
-                                autocorrect="off"
-                                autocapitalize="off"
-                                spellcheck="false"></textarea>
+                            <textarea id="message-input" rows="1" placeholder="Напишите сообщение... (Shift+Enter для переноса)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
                             <button class="vk-btn" id="send-btn">Отправить</button>
                         </div>
                     </div>
-
                 </div>
             </div>
+        </div>
+    </div>
 
+    <!-- МОДАЛКА ПРОФИЛЯ -->
+    <div class="profile-modal" id="profile-modal">
+        <div class="profile-modal-content">
+            <div class="profile-avatar" id="modal-avatar">
+                <div class="online-dot"></div>
+            </div>
+            <div class="profile-name" id="modal-name"></div>
+            <div class="profile-username" id="modal-username"></div>
+
+            <div class="profile-status online" id="modal-status">В сети</div>
+
+            <div class="profile-bio-block">
+                <div class="profile-bio-title">О себе</div>
+                <div class="profile-bio-text">Пользователь пока ничего не рассказал о себе.</div>
+            </div>
+
+            <button class="vk-btn w-100" id="modal-write-btn">Написать сообщение</button>
+            <button class="btn btn-link text-muted mt-2 w-100 text-decoration-none" onclick="closeProfileModal()">Закрыть</button>
         </div>
     </div>
 {% endblock %}
@@ -227,7 +315,6 @@
 <script>
     let currentChatId = null;
     let socket = null;
-    // Используем public_name, который мы добавили в модель User
     let currentUser = "{{ request.user.public_name }}";
     let nextPageUrl = null;
     let isLoadingHistory = false;
@@ -397,6 +484,261 @@
 
     function scrollToBottom() {
         container.scrollTop = container.scrollHeight;
+    }
+
+    // --- ВСТРОЕННЫЙ ПОИСК ---
+    const searchContainer = document.getElementById('search-container');
+    const searchInput = document.getElementById('global-search-input');
+    const searchDropdown = document.getElementById('search-dropdown');
+    const searchResults = document.getElementById('search-results');
+    const clearSearchBtn = document.getElementById('clear-search');
+    const tabUsers = document.getElementById('tab-users');
+    const tabChats = document.getElementById('tab-chats');
+
+    let currentTab = 'users';
+    let searchTimeout = null;
+
+    searchInput.addEventListener('focus', () => {
+        clearSearchBtn.style.opacity = '1';
+        searchDropdown.style.display = 'flex';
+        if (searchInput.value.trim().length < 2) {
+            searchResults.innerHTML = '<div class="text-center text-muted mt-4">Начните вводить имя...</div>';
+        }
+    });
+
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            if (!searchContainer.contains(document.activeElement)) {
+                clearSearchBtn.style.opacity = '0';
+            }
+        }, 100);
+    });
+
+    document.addEventListener('click', (e) => {
+        const isClickInsideSearch = searchContainer.contains(e.target);
+        const isClickInsideModal = document.getElementById('profile-modal').contains(e.target);
+
+        if (!isClickInsideSearch && !isClickInsideModal) {
+            closeSearch();
+        }
+    });
+
+    function closeSearch() {
+        searchDropdown.style.display = 'none';
+        searchInput.value = '';
+        clearSearchBtn.style.opacity = '0';
+        searchResults.innerHTML = '';
+        searchInput.blur();
+    }
+
+    clearSearchBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        closeSearch();
+    });
+
+    function switchSearchTab(tab) {
+        currentTab = tab;
+        tabUsers.classList.toggle('active', tab === 'users');
+        tabChats.classList.toggle('active', tab === 'chats');
+        performSearch();
+    }
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            searchResults.innerHTML = '<div class="text-center text-muted mt-4">Введите хотя бы 2 символа...</div>';
+            return;
+        }
+
+        searchTimeout = setTimeout(performSearch, 300);
+    });
+
+    async function performSearch() {
+        const query = searchInput.value.trim();
+        if (query.length < 2) return;
+
+        searchResults.innerHTML = '<div class="text-center text-muted mt-4">Поиск...</div>';
+
+        try {
+            if (currentTab === 'users') {
+                const res = await fetch(`/api/users/search/?q=${encodeURIComponent(query)}`);
+                const users = await res.json();
+                renderUsers(users);
+            } else {
+                const res = await fetch(`/api/chats/search/?q=${encodeURIComponent(query)}`);
+                const chats = await res.json();
+                renderChats(chats);
+            }
+        } catch (error) {
+            searchResults.innerHTML = '<div class="text-danger text-center mt-4">Ошибка поиска</div>';
+        }
+    }
+
+    function renderUsers(users) {
+        searchResults.innerHTML = '';
+        if (users.length === 0) {
+            searchResults.innerHTML = '<div class="text-center text-muted mt-4">Люди не найдены</div>';
+            return;
+        }
+
+        users.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'list-group-item';
+            div.style.cursor = 'pointer';
+            div.innerHTML = `
+                <div class="vk-avatar bg-primary" style="width: 36px; height: 36px; font-size: 14px;">${user.public_name[0].toUpperCase()}</div>
+                <div>
+                    <div class="fw-bold">${user.public_name}</div>
+                    <small class="text-muted">@${user.username}</small>
+                </div>
+            `;
+            div.onclick = () => openProfileModal(user);
+            searchResults.appendChild(div);
+        });
+    }
+
+    function renderChats(chats) {
+        searchResults.innerHTML = '';
+        if (chats.length === 0) {
+            searchResults.innerHTML = '<div class="text-center text-muted mt-4">Чаты не найдены</div>';
+            return;
+        }
+
+        chats.forEach(chat => {
+            const div = document.createElement('div');
+            div.className = 'list-group-item';
+            div.style.cursor = 'pointer';
+            const titleToShow = chat.display_title || chat.title;
+
+            div.innerHTML = `
+                <div class="vk-avatar bg-secondary" style="width: 36px; height: 36px; font-size: 14px;">${titleToShow[0].toUpperCase()}</div>
+                <div>
+                    <div class="fw-bold">${titleToShow}</div>
+                    <small class="text-muted">${chat.type}</small>
+                </div>
+            `;
+            div.onclick = () => joinAndOpenChat(chat.id);
+            searchResults.appendChild(div);
+        });
+    }
+
+    // --- ЛОГИКА МОДАЛКИ ПРОФИЛЯ ---
+    const profileModal = document.getElementById('profile-modal');
+    const modalAvatar = document.getElementById('modal-avatar');
+    const modalName = document.getElementById('modal-name');
+    const modalUsername = document.getElementById('modal-username');
+    const modalWriteBtn = document.getElementById('modal-write-btn');
+
+    let selectedUser = null;
+
+    function openProfileModal(user) {
+        selectedUser = user;
+        modalAvatar.innerHTML = `<div class="online-dot"></div>`;
+        modalAvatar.insertAdjacentText('afterbegin', user.public_name[0].toUpperCase());
+
+        modalName.innerText = user.public_name;
+        modalUsername.innerText = `@${user.username}`;
+
+        modalWriteBtn.onclick = () => {
+            closeProfileModal();
+            startDirectChat(user);
+        };
+
+        profileModal.style.display = 'flex';
+    }
+
+    function closeProfileModal() {
+        profileModal.style.display = 'none';
+    }
+
+    profileModal.addEventListener('click', (e) => {
+        if (e.target === profileModal) closeProfileModal();
+    });
+
+    async function startDirectChat(user) {
+        try {
+            const response = await fetch('/api/chats/direct/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ user_id: user.id })
+            });
+
+            if (response.ok) {
+                const chat = await response.json();
+
+                // Закрываем поиск, если он был открыт
+                closeSearch();
+
+                // Проверяем, есть ли этот чат уже в DOM
+                const existingChatItem = document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`);
+
+                if (!existingChatItem) {
+                    // Если чата нет в списке, добавляем его в DOM
+                    const chatList = document.getElementById('chat-list');
+
+                    // Удаляем заглушку "У вас пока нет чатов", если она есть
+                    const emptyState = chatList.querySelector('.p-4.text-muted');
+                    if (emptyState) emptyState.remove();
+
+                    const a = document.createElement('a');
+                    a.href = "#";
+                    a.className = 'list-group-item list-group-item-action chat-item';
+                    a.setAttribute('data-chat-id', chat.id);
+                    a.innerHTML = `
+                        <div class="vk-avatar bg-primary">${user.public_name[0].toUpperCase()}</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold text-truncate" style="font-size: 15px;">${user.public_name}</span>
+                            </div>
+                            <small class="text-muted text-truncate d-block" style="font-size: 13px;">Private dialog</small>
+                        </div>
+                    `;
+
+                    // Добавляем обработчик клика
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+                        this.classList.add('active');
+                        openChat(this.getAttribute('data-chat-id'), this.querySelector('.fw-bold').innerText.trim());
+                    });
+
+                    // Вставляем в начало списка
+                    chatList.insertBefore(a, chatList.firstChild);
+
+                    // Сразу открываем
+                    a.click();
+                } else {
+                    // Если чат уже есть в списке, просто кликаем на него
+                    existingChatItem.click();
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function joinAndOpenChat(chatId) {
+        try {
+            const response = await fetch(`/api/chats/${chatId}/join/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            if (response.ok || response.status === 400) {
+                // Если вступили успешно, перезагружаем для подтягивания списка
+                // В идеале здесь тоже можно добавить в DOM без перезагрузки
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error(error);
+        }
     }
 </script>
 {% endblock %}

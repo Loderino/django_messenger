@@ -130,14 +130,14 @@ class ChatViewSet(viewsets.ModelViewSet):
         )
 
         if existing_chat:
-            return Response(ChatSerializer(existing_chat).data, status=status.HTTP_200_OK)
+            return Response(ChatSerializer(existing_chat, context={"request": request}).data, status=status.HTTP_200_OK)
 
         with transaction.atomic():
             chat = Chat.objects.create(type=Chat.Type.DIRECT)
             Membership.objects.create(chat=chat, user=request.user, role=Membership.Role.ADMIN)
             Membership.objects.create(chat=chat, user=other_user, role=Membership.Role.ADMIN)
 
-        return Response(ChatSerializer(chat).data, status=status.HTTP_201_CREATED)
+        return Response(ChatSerializer(chat, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["get"], pagination_class=MessageCursorPagination)
     def messages(self, request, pk=None):
@@ -201,17 +201,17 @@ class ChatViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def search(self, request):
         query = request.query_params.get("q", "").strip()
-
         if not query:
             return Response({"detail": "Query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        chats = self.get_queryset().filter(title__icontains=query)
-        page = self.paginate_queryset(chats)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        chats = Chat.objects.filter(
+            Q(type__in=[Chat.Type.GROUP, Chat.Type.CHANNEL], title__icontains=query)
+            | Q(type=Chat.Type.DIRECT, memberships__user__username__icontains=query)
+            | Q(type=Chat.Type.DIRECT, memberships__user__display_name__icontains=query)
+        ).distinct()
+        chats = chats[:10]
 
-        serializer = self.get_serializer(chats, many=True)
+        serializer = self.get_serializer(chats, many=True, context={"request": request})
         return Response(serializer.data)
 
 

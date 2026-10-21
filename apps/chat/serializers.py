@@ -9,10 +9,18 @@ User = get_user_model()
 
 
 class ChatSerializer(serializers.ModelSerializer):
+    display_title = serializers.SerializerMethodField()
+
     class Meta:
         model = Chat
-        fields: ClassVar[list[str]] = ["id", "type", "title", "parent", "created_at"]
+        fields: ClassVar[list[str]] = ["id", "type", "title", "display_title", "parent", "created_at"]
         read_only_fields: ClassVar[list[str]] = ["id", "created_at"]
+
+    def get_display_title(self, obj):
+        request = self.context.get("request")
+        if request and request.user:
+            return obj.get_display_title(request.user)
+        return obj.title or f"Chat #{obj.pk}"
 
     def validate(self, attrs):
         chat_type = attrs.get("type", getattr(self.instance, "type", None))

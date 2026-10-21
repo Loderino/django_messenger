@@ -126,7 +126,7 @@
     .search-tab.active { color: var(--vk-blue); font-weight: 600; border-bottom-color: var(--vk-blue); }
     .search-results-list { flex-grow: 1; overflow-y: auto; }
 
-    /* Список чатов и результатов поиска */
+    /* Список чатов */
     .list-group-item {
         border: none; border-bottom: 1px solid var(--vk-border); padding: 12px 16px;
         background-color: var(--sidebar-bg); color: var(--text-main);
@@ -140,7 +140,7 @@
         width: 48px; height: 48px; border-radius: 2px;
         display: flex; justify-content: center; align-items: center;
         font-weight: 600; font-size: 18px; flex-shrink: 0; color: white;
-        object-fit: cover; /* Важно для картинок */
+        object-fit: cover;
     }
 
     /* --- ОКНО ЧАТА --- */
@@ -151,7 +151,8 @@
         background-size: var(--pattern-size) var(--pattern-size);
         overflow: hidden;
     }
-    .chat-header { background-color: var(--header-bg); height: 60px; padding: 0 20px; border-bottom: 1px solid var(--vk-border); display: flex; align-items: center; flex-shrink: 0; }
+
+    .chat-header { background-color: var(--header-bg); height: 60px; padding: 0 20px; border-bottom: 1px solid var(--vk-border); display: flex; align-items: center; flex-shrink: 0; justify-content: space-between; }
 
     .chat-messages { flex-grow: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 2px; }
 
@@ -163,7 +164,7 @@
         width: 36px; height: 36px; border-radius: 2px; margin-right: 12px;
         flex-shrink: 0; display: flex; justify-content: center; align-items: center;
         color: white; font-weight: 600; font-size: 14px;
-        object-fit: cover; /* Важно для картинок */
+        object-fit: cover;
     }
     .message-content { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; }
     .message-header { display: flex; align-items: baseline; margin-bottom: 2px; }
@@ -187,7 +188,7 @@
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); }
     .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
 
-    /* Модалка профиля */
+    /* Модалка профиля (универсальная) */
     .profile-modal {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.5); z-index: 2000;
@@ -202,7 +203,6 @@
         color: white; font-size: 40px; font-weight: bold; display: flex; justify-content: center; align-items: center;
         margin: 0 auto 15px auto; position: relative;
     }
-    /* Зеленая точка онлайна */
     .online-dot {
         position: absolute; bottom: -4px; right: -4px;
         width: 24px; height: 24px; border-radius: 50%;
@@ -213,31 +213,23 @@
     .profile-status { font-size: 13px; margin-bottom: 20px; font-weight: 500; }
     .profile-status.online { color: #4caf50; }
 
-    /* Блок "О себе" */
     .profile-bio-block {
         background: var(--active-chat-bg); border: 1px solid var(--vk-border); border-radius: 4px;
         padding: 15px; margin-bottom: 20px; text-align: left;
     }
-    .profile-bio-title {
-        font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;
-    }
-    .profile-bio-text {
-        font-size: 14px; color: var(--text-main); line-height: 1.4;
-    }
+    .profile-bio-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .profile-bio-text { font-size: 14px; color: var(--text-main); line-height: 1.4; }
 </style>
 {% endblock %}
 
 {% block content %}
     <div class="vk-topbar">
         <div class="topbar-inner">
-
             <a href="/" class="vk-logo">
                 <img src="{% static 'images/logos/logo.png' %}">
                 <span>Лосёво</span>
             </a>
-
             <input type="text" class="vk-search" placeholder="Поиск...">
-
             <div class="ms-auto d-flex align-items-center gap-3">
                 <button class="btn btn-sm btn-outline-light border-0" onclick="toggleTheme()" title="Сменить тему">
                     <i class="bi bi-moon-stars-fill fs-5" id="themeIcon"></i>
@@ -252,7 +244,6 @@
                     </form>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -276,7 +267,7 @@
 
                 <div class="list-group list-group-flush overflow-auto" id="chat-list">
                     {% for chat in chats %}
-                        <a href="#" class="list-group-item list-group-item-action chat-item" data-chat-id="{{ chat.id }}">
+                        <a href="#" class="list-group-item list-group-item-action chat-item" data-chat-id="{{ chat.id }}" data-chat-type="{{ chat.type }}">
                             {% if chat.avatar_url %}
                                 <img src="{{ chat.avatar_url }}" class="vk-avatar">
                             {% else %}
@@ -286,7 +277,9 @@
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="fw-bold text-truncate" style="font-size: 15px;">{{ chat.display_title }}</span>
                                 </div>
-                                <small class="text-muted text-truncate d-block" style="font-size: 13px;">{{ chat.type_display }}</small>
+                                <small class="text-muted text-truncate d-block" style="font-size: 13px;">
+                                    {{ chat.type_display }}
+                                </small>
                             </div>
                         </a>
                     {% empty %}
@@ -302,7 +295,13 @@
                 </div>
                 <div id="active-chat-wrapper" style="display: none; flex-direction: column; height: 100%;">
                     <div class="chat-header" id="active-chat-header">
-                        <div class="fw-bold" style="font-size: 16px;" id="active-chat-title">Загрузка...</div>
+                        <div>
+                            <div class="fw-bold" style="font-size: 16px;" id="active-chat-title">Загрузка...</div>
+                            <div class="text-muted" style="font-size: 13px;" id="active-chat-members-count"></div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger border-0" id="leave-chat-btn" style="display: none;" onclick="leaveChat()">
+                            <i class="bi bi-box-arrow-left me-1"></i> Выйти
+                        </button>
                     </div>
                     <div class="chat-messages" id="messages-container"></div>
                     <div class="chat-footer">
@@ -319,7 +318,7 @@
         </div>
     </div>
 
-    <!-- МОДАЛКА ПРОФИЛЯ -->
+    <!-- МОДАЛКА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ -->
     <div class="profile-modal" id="profile-modal">
         <div class="profile-modal-content">
             <div class="profile-avatar" id="modal-avatar">
@@ -327,16 +326,32 @@
             </div>
             <div class="profile-name" id="modal-name"></div>
             <div class="profile-username" id="modal-username"></div>
-
             <div class="profile-status online" id="modal-status">В сети</div>
-
             <div class="profile-bio-block">
                 <div class="profile-bio-title">О себе</div>
                 <div class="profile-bio-text">Пользователь пока ничего не рассказал о себе.</div>
             </div>
-
             <button class="vk-btn w-100" id="modal-write-btn">Написать сообщение</button>
             <button class="btn btn-link text-muted mt-2 w-100 text-decoration-none" onclick="closeProfileModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА ЧАТА (ГРУППЫ) -->
+    <div class="profile-modal" id="chat-modal">
+        <div class="profile-modal-content">
+            <div class="profile-avatar" id="chat-modal-avatar" style="background: var(--vk-blue);">
+                <i class="bi bi-people-fill" style="font-size: 40px;"></i>
+            </div>
+            <div class="profile-name" id="chat-modal-title"></div>
+            <div class="profile-username" id="chat-modal-type"></div>
+
+            <div class="profile-bio-block">
+                <div class="profile-bio-title">О чате</div>
+                <div class="profile-bio-text">Описание пока не добавлено.</div>
+            </div>
+
+            <button class="vk-btn w-100" id="chat-modal-join-btn">Вступить в чат</button>
+            <button class="btn btn-link text-muted mt-2 w-100 text-decoration-none" onclick="closeChatModal()">Закрыть</button>
         </div>
     </div>
 {% endblock %}
@@ -344,6 +359,7 @@
 {% block extra_js %}
 <script>
     let currentChatId = null;
+    let currentChatType = null;
     let socket = null;
     let currentUser = "{{ request.user.public_name }}";
     let nextPageUrl = null;
@@ -380,22 +396,89 @@
         }
     });
 
+    // --- ДОБАВЛЕНИЕ ЧАТА В СПИСОК ---
+    function addChatToList(chat, user) {
+        if (document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`)) return;
+
+        const chatList = document.getElementById('chat-list');
+        const emptyState = chatList.querySelector('.p-4.text-muted');
+        if (emptyState) emptyState.remove();
+
+        const a = document.createElement('a');
+        a.href = "#";
+        a.className = 'list-group-item list-group-item-action chat-item';
+        a.setAttribute('data-chat-id', chat.id);
+        a.setAttribute('data-chat-type', chat.type);
+
+        let avatarHtml = '';
+        if (chat.type === 'DIRECT' && user.avatar_url) {
+            avatarHtml = `<img src="${user.avatar_url}" class="vk-avatar">`;
+        } else {
+            const titleToShow = chat.display_title || chat.title || '?';
+            avatarHtml = `<div class="vk-avatar bg-secondary">${titleToShow[0].toUpperCase()}</div>`;
+        }
+
+        a.innerHTML = `
+            ${avatarHtml}
+            <div class="flex-grow-1 min-w-0">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-truncate" style="font-size: 15px;">${chat.display_title || chat.title}</span>
+                </div>
+                <small class="text-muted text-truncate d-block" style="font-size: 13px;">
+                    ${chat.type === 'DIRECT' ? 'Private dialog' : 'Group chat'}
+                </small>
+            </div>
+        `;
+
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+            this.classList.add('active');
+            openChat(this.getAttribute('data-chat-id'), this.querySelector('.fw-bold').innerText.trim(), this.getAttribute('data-chat-type'));
+        });
+
+        chatList.insertBefore(a, chatList.firstChild);
+    }
+
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
             document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
             this.classList.add('active');
-            openChat(this.getAttribute('data-chat-id'), this.querySelector('.fw-bold').innerText.trim());
+            openChat(this.getAttribute('data-chat-id'), this.querySelector('.fw-bold').innerText.trim(), this.getAttribute('data-chat-type'));
         });
     });
 
-    async function openChat(chatId, chatTitle) {
+    // --- ОТКРЫТИЕ ЧАТА ---
+    async function openChat(chatId, chatTitle, chatType) {
         currentChatId = chatId;
+        currentChatType = chatType;
         nextPageUrl = null;
 
         document.getElementById('empty-state').style.display = 'none';
         document.getElementById('active-chat-wrapper').style.display = 'flex';
         document.getElementById('active-chat-title').innerText = chatTitle;
+
+        const leaveBtn = document.getElementById('leave-chat-btn');
+        if (chatType === 'GROUP' || chatType === 'CHANNEL') {
+            leaveBtn.style.display = 'block';
+        } else {
+            leaveBtn.style.display = 'none';
+        }
+
+        const headerCount = document.getElementById('active-chat-members-count');
+        if (chatType === 'GROUP' || chatType === 'CHANNEL') {
+            try {
+                const res = await fetch(`/api/chats/${chatId}/members/`);
+                const data = await res.json();
+                const count = data.count !== undefined ? data.count : (data.results ? data.results.length : data.length);
+                headerCount.innerText = `${count} участников`;
+            } catch (e) {
+                headerCount.innerText = '';
+            }
+        } else {
+            headerCount.innerText = '';
+        }
 
         container.innerHTML = '<div class="text-center text-muted mt-4 w-100">Загрузка сообщений...</div>';
         isInitialLoad = true;
@@ -415,10 +498,37 @@
             scrollToBottom();
             isInitialLoad = false;
 
-            connectWebSocket(chatId);
-
         } catch (error) {
             container.innerHTML = `<div class="text-danger text-center mt-4 w-100">${error.message}</div>`;
+        }
+    }
+
+    // --- ВЫХОД ИЗ ЧАТА ---
+    async function leaveChat() {
+        if (!currentChatId || !confirm("Вы уверены, что хотите выйти из этого чата?")) return;
+
+        try {
+            const response = await fetch(`/api/chats/${currentChatId}/leave/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            if (response.ok || response.status === 204) {
+                const chatItem = document.querySelector(`.chat-item[data-chat-id="${currentChatId}"]`);
+                if (chatItem) chatItem.remove();
+
+                currentChatId = null;
+                currentChatType = null;
+                document.getElementById('active-chat-wrapper').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'flex';
+            } else {
+                const err = await response.json();
+                alert(err.detail || "Не удалось выйти из чата");
+            }
+        } catch (error) {
+            console.error(error);
         }
     }
 
@@ -495,20 +605,56 @@
 
     document.getElementById('send-btn').addEventListener('click', sendMessage);
 
-    function connectWebSocket(chatId) {
-        if (socket) socket.close();
+    function connectGlobalWebSocket() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        socket = new WebSocket(`${wsProtocol}${window.location.host}/ws/chat/${chatId}/`);
+        socket = new WebSocket(`${wsProtocol}${window.location.host}/ws/user/`);
+
+        socket.onopen = function(e) {
+            console.log("Глобальный WebSocket подключен");
+        };
 
         socket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            if (data.type === 'message.new') {
-                const isScrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
-                renderMessage(data.data);
-                if (isScrolledToBottom) scrollToBottom();
+
+            if (data.type === 'chat.message.new') {
+                if (data.payload.chat.id == currentChatId) {
+                    const isScrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+                    renderMessage(data.payload.message);
+                    if (isScrolledToBottom) scrollToBottom();
+                }
+            }
+            else if (data.type === 'chat.direct.created') {
+                addChatToList(data.payload.chat, data.payload.user);
+            }
+            else if (data.type === 'chat.member.joined') {
+                if (data.payload.chat.id == currentChatId) {
+                    fetch(`/api/chats/${currentChatId}/members/`)
+                        .then(r => r.json())
+                        .then(d => {
+                            const count = d.count !== undefined ? d.count : d.results.length;
+                            document.getElementById('active-chat-members-count').innerText = `${count} участников`;
+                        });
+                }
+            }
+            else if (data.type === 'chat.member.left') {
+                if (data.payload.chat.id == currentChatId) {
+                    fetch(`/api/chats/${currentChatId}/members/`)
+                        .then(r => r.json())
+                        .then(d => {
+                            const count = d.count !== undefined ? d.count : d.results.length;
+                            document.getElementById('active-chat-members-count').innerText = `${count} участников`;
+                        });
+                }
             }
         };
+
+        socket.onclose = function(e) {
+            console.log("WebSocket отключен. Переподключение...");
+            setTimeout(connectGlobalWebSocket, 3000);
+        };
     }
+
+    connectGlobalWebSocket();
 
     function scrollToBottom() {
         container.scrollTop = container.scrollHeight;
@@ -544,7 +690,7 @@
 
     document.addEventListener('click', (e) => {
         const isClickInsideSearch = searchContainer.contains(e.target);
-        const isClickInsideModal = document.getElementById('profile-modal').contains(e.target);
+        const isClickInsideModal = document.getElementById('profile-modal').contains(e.target) || document.getElementById('chat-modal').contains(e.target);
 
         if (!isClickInsideSearch && !isClickInsideModal) {
             closeSearch();
@@ -647,12 +793,12 @@
                     <small class="text-muted">${chat.type}</small>
                 </div>
             `;
-            div.onclick = () => joinAndOpenChat(chat.id);
+            div.onclick = () => openChatModal(chat);
             searchResults.appendChild(div);
         });
     }
 
-    // --- ЛОГИКА МОДАЛКИ ПРОФИЛЯ ---
+    // --- МОДАЛКА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ---
     const profileModal = document.getElementById('profile-modal');
     const modalAvatar = document.getElementById('modal-avatar');
     const modalName = document.getElementById('modal-name');
@@ -663,21 +809,16 @@
 
     function openProfileModal(user) {
         selectedUser = user;
-
-        // Устанавливаем картинку
         modalAvatar.innerHTML = `
             <img src="${user.avatar_url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
             <div class="online-dot"></div>
         `;
-
         modalName.innerText = user.public_name;
         modalUsername.innerText = `@${user.username}`;
-
         modalWriteBtn.onclick = () => {
             closeProfileModal();
             startDirectChat(user);
         };
-
         profileModal.style.display = 'flex';
     }
 
@@ -687,6 +828,51 @@
 
     profileModal.addEventListener('click', (e) => {
         if (e.target === profileModal) closeProfileModal();
+    });
+
+    // --- МОДАЛКА ЧАТА (ГРУППЫ) ---
+    const chatModal = document.getElementById('chat-modal');
+    const chatModalTitle = document.getElementById('chat-modal-title');
+    const chatModalType = document.getElementById('chat-modal-type');
+    const chatModalJoinBtn = document.getElementById('chat-modal-join-btn');
+
+    function openChatModal(chat) {
+        chatModalTitle.innerText = chat.display_title || chat.title;
+        let typeRu = chat.type === 'GROUP' ? 'Группа' : (chat.type === 'CHANNEL' ? 'Канал' : chat.type);
+        chatModalType.innerText = typeRu;
+
+        if (chat.is_member) {
+            chatModalJoinBtn.style.display = 'block';
+            chatModalJoinBtn.innerText = "Перейти в чат";
+            chatModalJoinBtn.className = "vk-btn w-100";
+            chatModalJoinBtn.onclick = () => {
+                closeChatModal();
+                closeSearch();
+                const chatItem = document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`);
+                if (chatItem) {
+                    chatItem.click();
+                } else {
+                    window.location.reload();
+                }
+            };
+        } else {
+            chatModalJoinBtn.style.display = 'block';
+            chatModalJoinBtn.innerText = "Вступить в чат";
+            chatModalJoinBtn.onclick = () => {
+                closeChatModal();
+                joinAndOpenChat(chat.id);
+            };
+        }
+
+        chatModal.style.display = 'flex';
+    }
+
+    function closeChatModal() {
+        chatModal.style.display = 'none';
+    }
+
+    chatModal.addEventListener('click', (e) => {
+        if (e.target === chatModal) closeChatModal();
     });
 
     async function startDirectChat(user) {
@@ -702,41 +888,14 @@
 
             if (response.ok) {
                 const chat = await response.json();
-
                 closeSearch();
 
-                const existingChatItem = document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`);
-
-                if (!existingChatItem) {
-                    const chatList = document.getElementById('chat-list');
-                    const emptyState = chatList.querySelector('.p-4.text-muted');
-                    if (emptyState) emptyState.remove();
-
-                    const a = document.createElement('a');
-                    a.href = "#";
-                    a.className = 'list-group-item list-group-item-action chat-item';
-                    a.setAttribute('data-chat-id', chat.id);
-                    a.innerHTML = `
-                        <img src="${user.avatar_url}" class="vk-avatar">
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-bold text-truncate" style="font-size: 15px;">${user.public_name}</span>
-                            </div>
-                            <small class="text-muted text-truncate d-block" style="font-size: 13px;">Private dialog</small>
-                        </div>
-                    `;
-
-                    a.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
-                        this.classList.add('active');
-                        openChat(this.getAttribute('data-chat-id'), this.querySelector('.fw-bold').innerText.trim());
-                    });
-
-                    chatList.insertBefore(a, chatList.firstChild);
-                    a.click();
-                } else {
-                    existingChatItem.click();
+                addChatToList(chat, user);
+                const newChatItem = document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`);
+                if (newChatItem) {
+                    document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+                    newChatItem.classList.add('active');
+                    openChat(chat.id, user.public_name, chat.type);
                 }
             }
         } catch (error) {
@@ -744,6 +903,7 @@
         }
     }
 
+    // --- ВСТУПЛЕНИЕ В ЧАТ И ЕГО ОТКРЫТИЕ ---
     async function joinAndOpenChat(chatId) {
         try {
             const response = await fetch(`/api/chats/${chatId}/join/`, {
@@ -754,7 +914,26 @@
             });
 
             if (response.ok || response.status === 400) {
-                window.location.reload();
+                // Если успешно вступили, получаем данные этого чата, чтобы добавить его в DOM
+                const chatRes = await fetch(`/api/chats/${chatId}/`);
+                if (chatRes.ok) {
+                    const chatData = await chatRes.json();
+
+                    // Формируем заглушку для пользователя
+                    const fakeUser = {
+                        public_name: chatData.title ? chatData.title[0] : 'G',
+                        avatar_url: null
+                    };
+
+                    // Добавляем чат в список слева
+                    addChatToList(chatData, fakeUser);
+
+                    // Находим и кликаем, чтобы открыть справа
+                    const newChatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
+                    if (newChatItem) {
+                        newChatItem.click();
+                    }
+                }
             }
         } catch (error) {
             console.error(error);

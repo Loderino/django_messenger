@@ -17,6 +17,7 @@ from .models import Chat, Membership, Message
 from .serializers import (
     ChatSerializer,
     DirectChatCreateSerializer,
+    MembershipSerializer,
     MessageCreateSerializer,
     MessageSerializer,
     MessageUpdateSerializer,
@@ -60,7 +61,29 @@ class ChatViewSet(viewsets.ModelViewSet):
             if not is_admin:
                 raise PermissionDenied("Only admins or owners can create topics.")
 
-            serializer.save()
+            chat = serializer.save()
+
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"chat_{parent.id}",
+                {
+                    "type": "chat_topic_created",
+                    "payload": {
+                        "chat": {
+                            "id": chat.id,
+                            "display_title": chat.get_display_title(self.request.user),
+                            "type": chat.type,
+                            "parent": chat.parent.id,
+                            "created_at": chat.created_at.isoformat(),
+                        },
+                        "user": {
+                            "id": self.request.user.id,
+                            "public_name": self.request.user.public_name,
+                            "avatar_url": self.request.user.avatar_url,
+                        },
+                    },
+                },
+            )
             return
 
         chat = serializer.save()
@@ -137,6 +160,36 @@ class ChatViewSet(viewsets.ModelViewSet):
             Membership.objects.create(chat=chat, user=request.user, role=Membership.Role.ADMIN)
             Membership.objects.create(chat=chat, user=other_user, role=Membership.Role.ADMIN)
 
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"user_{request.user.id}",
+            {
+                "type": "join_chat_group",
+                "payload": {"chat_id": chat.id},
+            },
+        )
+
+        async_to_sync(channel_layer.group_send)(
+            f"user_{other_user.id}",
+            {
+                "type": "chat_direct_created",
+                "payload": {
+                    "chat": {
+                        "id": chat.id,
+                        "display_title": chat.get_display_title(other_user),
+                        "type": chat.type,
+                        "parent": chat.parent.id if chat.parent else None,
+                        "created_at": chat.created_at.isoformat(),
+                    },
+                    "user": {
+                        "id": other_user.id,
+                        "public_name": other_user.public_name,
+                        "avatar_url": other_user.avatar_url,
+                    },
+                },
+            },
+        )
+
         return Response(ChatSerializer(chat, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["get"], pagination_class=MessageCursorPagination)
@@ -167,6 +220,35 @@ class ChatViewSet(viewsets.ModelViewSet):
 
         Membership.objects.create(chat=chat, user=request.user, role=Membership.Role.MEMBER)
 
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"user_{request.user.id}",
+            {
+                "type": "join_chat_group",
+                "payload": {"chat_id": chat.id},
+            },
+        )
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{chat.id}",
+            {
+                "type": "chat_member_joined",
+                "payload": {
+                    "chat": {
+                        "id": chat.id,
+                        "display_title": chat.get_display_title(request.user),
+                        "type": chat.type,
+                        "parent": chat.parent.id if chat.parent else None,
+                        "created_at": chat.created_at.isoformat(),
+                    },
+                    "user": {
+                        "id": request.user.id,
+                        "public_name": request.user.public_name,
+                        "avatar_url": request.user.avatar_url,
+                    },
+                },
+            },
+        )
+
         return Response({"detail": "Successfully joined the chat."}, status=status.HTTP_201_CREATED)
 
     @extend_schema(request=None)
@@ -189,6 +271,35 @@ class ChatViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You cannot exit from a chat you own.")
 
         membership.delete()
+
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"user_{request.user.id}",
+            {
+                "type": "leave_chat_group",
+                "payload": {"chat_id": chat.id},
+            },
+        )
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{chat.id}",
+            {
+                "type": "chat_member_left",
+                "payload": {
+                    "chat": {
+                        "id": chat.id,
+                        "display_title": chat.get_display_title(request.user),
+                        "type": chat.type,
+                        "parent": chat.parent.id if chat.parent else None,
+                        "created_at": chat.created_at.isoformat(),
+                    },
+                    "user": {
+                        "id": request.user.id,
+                        "public_name": request.user.public_name,
+                        "avatar_url": request.user.avatar_url,
+                    },
+                },
+            },
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -213,6 +324,27 @@ class ChatViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(chats, many=True, context={"request": request})
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get"])
+    def members(self, request, pk=None):
+        chat = self.get_object()
+        is_member = Membership.objects.filter(chat=chat, user=request.user).exists()
+        if not is_member:
+            raise PermissionDenied("You do not have permission to view this chat members.")
+
+        memberships = Membership.objects.filter(chat=chat).select_related("user").order_by("joined_at")
+        total_count = memberships.count()
+
+        page = self.paginate_queryset(memberships)
+        if page is not None:
+            serializer = MembershipSerializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+
+            response.data["count"] = total_count
+            return response
+
+        serializer = MembershipSerializer(memberships, many=True)
+        return Response({"count": total_count, "results": serializer.data})
 
 
 class MessageViewSet(
@@ -249,13 +381,16 @@ class MessageViewSet(
         async_to_sync(channel_layer.group_send)(
             f"chat_{message.chat_id}",
             {
-                "type": "chat_message",
-                "message": {
-                    "id": message.id,
-                    "text": message.text,
-                    "sender_name": message.sender.public_name,
-                    "sender_avatar": message.sender.avatar_url,
-                    "created_at": message.created_at.isoformat(),
+                "type": "chat_message_new",
+                "payload": {
+                    "chat": {"id": message.chat_id},
+                    "message": {
+                        "id": message.id,
+                        "text": message.text,
+                        "sender_name": message.sender.public_name,
+                        "sender_avatar": message.sender.avatar_url,
+                        "created_at": message.created_at.isoformat(),
+                    },
                 },
             },
         )

@@ -10,10 +10,11 @@ User = get_user_model()
 
 class ChatSerializer(serializers.ModelSerializer):
     display_title = serializers.SerializerMethodField()
+    is_member = serializers.SerializerMethodField()
 
     class Meta:
         model = Chat
-        fields: ClassVar[list[str]] = ["id", "type", "title", "display_title", "parent", "created_at"]
+        fields: ClassVar[list[str]] = ["id", "type", "title", "display_title", "is_member", "parent", "created_at"]
         read_only_fields: ClassVar[list[str]] = ["id", "created_at"]
 
     def get_display_title(self, obj):
@@ -21,6 +22,13 @@ class ChatSerializer(serializers.ModelSerializer):
         if request and request.user:
             return obj.get_display_title(request.user)
         return obj.title or f"Chat #{obj.pk}"
+
+    def get_is_member(self, obj):
+        request = self.context.get("request")
+        if request and request.user:
+            # Проверяем наличие связи
+            return obj.memberships.filter(user=request.user).exists()
+        return False
 
     def validate(self, attrs):
         chat_type = attrs.get("type", getattr(self.instance, "type", None))
@@ -81,12 +89,16 @@ class MessageUpdateSerializer(MessageSerializer):
 
 
 class MembershipSerializer(serializers.ModelSerializer):
-    user_name = serializers.SerializerMethodField()
+    public_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Membership
-        fields: ClassVar[list[str]] = ["id", "chat", "user", "user_name", "role", "joined_at"]
+        fields: ClassVar[list[str]] = ["id", "chat", "user", "public_name", "avatar_url", "role", "joined_at"]
         read_only_fields: ClassVar[list[str]] = ["id", "joined_at"]
 
-    def get_user_name(self, obj):
+    def get_public_name(self, obj):
         return obj.user.public_name
+
+    def get_avatar_url(self, obj):
+        return obj.user.avatar_url

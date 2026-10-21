@@ -3,8 +3,8 @@ from channels.db import database_sync_to_async
 from channels.layers import get_channel_layer
 from channels.testing import WebsocketCommunicator
 
-from apps.chat.events import WSCloseCode, WSEvent
 from apps.chat.models import Chat, Membership
+from apps.users.events import WSCloseCode, WSEvent
 from config.asgi import application
 
 
@@ -47,7 +47,7 @@ class TestChatConsumer:
         await channel_layer.group_send(
             f"chat_{group_chat_with_user.id}",
             {
-                "type": "chat_message",
+                "type": "chat_message_new",
                 "message": {
                     "id": 1,
                     "text": "Hello WebSocket",

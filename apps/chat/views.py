@@ -21,6 +21,7 @@ def index(request):
         chats_data.append(
             {
                 "id": chat.id,
+                "type": chat.type,
                 "type_display": chat.get_type_display(),
                 "display_title": display_title,
                 "first_letter": display_title[0].upper() if display_title else "?",

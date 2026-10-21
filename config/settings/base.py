@@ -81,6 +81,9 @@ ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_PROVIDERS = {}
 
+LOGIN_REDIRECT_URL = "/chats/"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/accounts/login/"
+
 SITE_ID = 1
 LANGUAGE_CODE = "ru-ru"
 TIME_ZONE = "Europe/Moscow"

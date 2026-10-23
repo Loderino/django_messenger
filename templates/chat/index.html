@@ -193,6 +193,23 @@
     .message-body { display: flex; align-items: flex-end; gap: 10px; }
     .message-text { font-size: 15px; line-height: 1.4; color: var(--text-main); word-wrap: break-word; flex-grow: 1; white-space: pre-wrap; }
     .message-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+    .message-row.msg-pending { opacity: 0.8; }
+    .message-row.msg-failed { background-color: rgba(220, 53, 69, 0.15); border-left: 3px solid #dc3545; cursor: pointer; }
+    .message-row.msg-failed:hover { background-color: rgba(220, 53, 69, 0.25); }
+
+    .spinner {
+        display: inline-block; width: 12px; height: 12px;
+        border: 2px solid var(--text-muted); border-top-color: transparent;
+        border-radius: 50%; animation: spin 1s linear infinite;
+        margin-left: 5px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .skeleton-message {
+        height: 40px; background: var(--active-chat-bg); border-radius: 4px;
+        margin-bottom: 10px; animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
     .chat-footer { background-color: var(--header-bg); padding: 16px 24px; border-top: 1px solid var(--vk-border); flex-shrink: 0; }
     .vk-input-group { display: flex; gap: 8px; align-items: flex-end; }
@@ -239,6 +256,9 @@
     }
     .profile-bio-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
     .profile-bio-text { font-size: 14px; color: var(--text-main); line-height: 1.4; }
+
+    #menu-retry:hover { background-color: var(--active-chat-bg); }
+    #menu-delete:hover { background-color: rgba(220, 53, 69, 0.1); }
 </style>
 {% endblock %}
 
@@ -416,12 +436,22 @@
             <button class="btn btn-link text-muted mt-2 w-100 text-decoration-none" id="close-create-chat-modal-btn">Отмена</button>
         </div>
     </div>
+
+    <div id="message-context-menu" style="display: none; position: absolute; z-index: 3000; background: var(--sidebar-bg); border: 1px solid var(--vk-border); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 160px; overflow: hidden;">
+        <div id="menu-retry" style="padding: 10px 15px; cursor: pointer; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--vk-border); display: none;">
+            <i class="bi bi-arrow-clockwise me-2"></i> Повторить
+        </div>
+        <div id="menu-delete" style="padding: 10px 15px; cursor: pointer; font-size: 14px; color: #dc3545;">
+            <i class="bi bi-trash me-2"></i> Удалить
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     window.APP_CONFIG = {
-        currentUser: "{{ request.user.public_name }}"
+        currentUser: "{{ request.user.public_name }}",
+        currentUserAvatar: "{{ request.user.avatar_url }}"
     };
 </script>
 <script src="{% static 'js/chat.js' %}"></script>

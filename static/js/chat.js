@@ -13,6 +13,20 @@ document.addEventListener("DOMContentLoaded", function() {
     let selectedUser = null;
     let selectedChatForModal = null;
 
+    // --- КЭШ ---
+    const chatCache = {};
+
+    function getCachedChat(chatId) {
+        return chatCache[chatId] || null;
+    }
+
+    function setCachedChat(chatId, data) {
+        if (!chatCache[chatId]) {
+            chatCache[chatId] = { messages: [], nextPageUrl: null, role: null, membersCount: null };
+        }
+        Object.assign(chatCache[chatId], data);
+    }
+
     // --- DOM ЭЛЕМЕНТЫ ---
     const container = document.getElementById('messages-container');
     const textarea = document.getElementById('message-input');
@@ -42,6 +56,11 @@ document.addEventListener("DOMContentLoaded", function() {
     const newChatTitleInput = document.getElementById('new-chat-title');
     const newChatTypeSelect = document.getElementById('new-chat-type');
 
+    const msgMenu = document.getElementById('message-context-menu');
+    const menuRetry = document.getElementById('menu-retry');
+    const menuDelete = document.getElementById('menu-delete');
+    let selectedMsgElement = null;
+
     // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
     function getCookie(name) {
         let cookieValue = null;
@@ -62,11 +81,42 @@ document.addEventListener("DOMContentLoaded", function() {
         container.scrollTop = container.scrollHeight;
     }
 
-    // --- ЛОГИКА TEXTAREA ---
+    async function fetchWithRetry(url, options = {}, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (response.ok) return response;
+                if (response.status >= 500) throw new Error("Server Error");
+                return response;
+            } catch (err) {
+                if (i === retries - 1) throw err;
+                await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+            }
+        }
+    }
+
+    // --- ЛОГИКА ЧЕРНОВИКОВ ---
+    function loadDraft(chatId) {
+        const draft = localStorage.getItem(`draft_${chatId}`);
+        textarea.value = draft || '';
+
+        // Фикс бага с "съеживанием" поля ввода
+        textarea.style.height = 'auto';
+        if (draft) {
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        } else {
+            textarea.style.height = 'auto'; // Сброс
+        }
+    }
+
     textarea.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
         if (this.scrollHeight > 150) this.style.overflowY = 'auto'; else this.style.overflowY = 'hidden';
+
+        if (currentChatId) {
+            localStorage.setItem(`draft_${currentChatId}`, this.value);
+        }
     });
 
     textarea.addEventListener('keydown', function(e) {
@@ -74,6 +124,28 @@ document.addEventListener("DOMContentLoaded", function() {
             e.preventDefault(); sendMessage();
         }
     });
+
+    // --- НЕОТПРАВЛЕННЫЕ СООБЩЕНИЯ ---
+    function saveFailedMessage(chatId, msg) {
+        let failed = JSON.parse(localStorage.getItem(`failed_${chatId}`) || '[]');
+        // Убираем флаг pending, чтобы при загрузке не крутился спиннер
+        const failedMsg = { ...msg, is_pending: false, is_failed: true };
+
+        if (!failed.some(m => m.id === msg.id)) {
+            failed.push(failedMsg);
+            localStorage.setItem(`failed_${chatId}`, JSON.stringify(failed));
+        }
+    }
+
+    function getFailedMessages(chatId) {
+        return JSON.parse(localStorage.getItem(`failed_${chatId}`) || '[]');
+    }
+
+    function clearFailedMessage(chatId, msgId) {
+        let failed = getFailedMessages(chatId);
+        failed = failed.filter(m => m.id !== msgId);
+        localStorage.setItem(`failed_${chatId}`, JSON.stringify(failed));
+    }
 
     // --- РАБОТА С ЧАТАМИ ---
     function addChatToList(chat, user) {
@@ -131,7 +203,8 @@ document.addEventListener("DOMContentLoaded", function() {
     async function openChat(chatId, chatTitle, chatType) {
         currentChatId = chatId;
         currentChatType = chatType;
-        nextPageUrl = null;
+
+        loadDraft(chatId);
 
         document.getElementById('empty-state').style.display = 'none';
         document.getElementById('active-chat-wrapper').style.display = 'flex';
@@ -143,49 +216,97 @@ document.addEventListener("DOMContentLoaded", function() {
         leaveBtn.style.display = 'none';
         settingsBtn.style.display = 'none';
 
+        let cached = getCachedChat(chatId);
+
+        // 1. МГНОВЕННО РИСУЕМ СООБЩЕНИЯ ИЗ КЭША (если есть)
+        if (cached && cached.messages.length > 0) {
+            nextPageUrl = cached.nextPageUrl;
+            container.innerHTML = '';
+            cached.messages.forEach(msg => renderMessage(msg));
+            scrollToBottom();
+        } else {
+            container.innerHTML = `
+                <div class="skeleton-message"></div>
+                <div class="skeleton-message" style="width: 60%;"></div>
+                <div class="skeleton-message"></div>
+            `;
+        }
+
+        // 1.5. Выводим неотправленные сообщения (они теперь с флагом is_pending: false)
+        const failedMsgs = getFailedMessages(chatId);
+        failedMsgs.forEach(msg => {
+            renderMessage(msg);
+        });
+        if (failedMsgs.length > 0) scrollToBottom();
+
+        // 2. ШАПКА ЧАТА
         if (chatType === 'GROUP' || chatType === 'CHANNEL') {
             leaveBtn.style.display = 'block';
 
-            try {
-                const chatRes = await fetch(`/api/chats/${chatId}/`);
-                const chatData = await chatRes.json();
-                if (chatData.user_role === 'OWNER' || chatData.user_role === 'ADMIN') {
+            if (cached && cached.role) {
+                if (cached.role === 'OWNER' || cached.role === 'ADMIN') {
                     settingsBtn.style.display = 'block';
                 }
-            } catch (e) { console.error(e); }
+                document.getElementById('active-chat-members-count').innerText = `${cached.membersCount} участников`;
+            } else {
+                try {
+                    const chatRes = await fetchWithRetry(`/api/chats/${chatId}/`);
+                    if (currentChatId !== chatId) return;
 
-            try {
-                const res = await fetch(`/api/chats/${chatId}/members/`);
-                const data = await res.json();
-                const count = data.count !== undefined ? data.count : (data.results ? data.results.length : data.length);
-                document.getElementById('active-chat-members-count').innerText = `${count} участников`;
-            } catch (e) {
-                document.getElementById('active-chat-members-count').innerText = '';
+                    const chatData = await chatRes.json();
+                    if (chatData.user_role === 'OWNER' || chatData.user_role === 'ADMIN') {
+                        settingsBtn.style.display = 'block';
+                    }
+
+                    const res = await fetchWithRetry(`/api/chats/${chatId}/members/`);
+                    if (currentChatId !== chatId) return;
+
+                    const data = await res.json();
+                    const count = data.count !== undefined ? data.count : (data.results ? data.results.length : data.length);
+
+                    document.getElementById('active-chat-members-count').innerText = `${count} участников`;
+
+                    setCachedChat(chatId, { role: chatData.user_role, membersCount: count });
+                } catch (e) {
+                    if (currentChatId !== chatId) return;
+                    console.error(e);
+                    document.getElementById('active-chat-members-count').innerText = '';
+                }
             }
         } else {
             document.getElementById('active-chat-members-count').innerText = '';
         }
 
-        container.innerHTML = '<div class="text-center text-muted mt-4 w-100">Загрузка сообщений...</div>';
-        isInitialLoad = true;
+        // 3. СООБЩЕНИЯ
+        if (!cached || cached.messages.length === 0) {
+            isInitialLoad = true;
+            try {
+                const response = await fetchWithRetry(`/api/chats/${chatId}/messages/`);
+                if (!response.ok) throw new Error("Ошибка загрузки");
 
-        try {
-            const response = await fetch(`/api/chats/${chatId}/messages/`);
-            if (!response.ok) throw new Error("Ошибка загрузки");
+                if (currentChatId !== chatId) return;
 
-            const data = await response.json();
-            nextPageUrl = data.next;
+                const data = await response.json();
+                nextPageUrl = data.next;
 
-            const messages = data.results ? [...data.results].reverse() : [...data].reverse();
+                const messages = data.results ? [...data.results].reverse() : [...data].reverse();
 
-            container.innerHTML = '';
-            messages.forEach(msg => renderMessage(msg));
+                setCachedChat(chatId, { messages: messages, nextPageUrl: nextPageUrl });
 
-            scrollToBottom();
-            isInitialLoad = false;
+                container.innerHTML = '';
+                messages.forEach(msg => renderMessage(msg));
 
-        } catch (error) {
-            container.innerHTML = `<div class="text-danger text-center mt-4 w-100">${error.message}</div>`;
+                getFailedMessages(chatId).forEach(msg => {
+                    renderMessage(msg);
+                });
+
+                scrollToBottom();
+                isInitialLoad = false;
+
+            } catch (error) {
+                if (currentChatId !== chatId) return;
+                container.innerHTML = `<div class="text-danger text-center mt-4 w-100">${error.message}</div>`;
+            }
         }
     }
 
@@ -193,7 +314,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!currentChatId || !confirm("Вы уверены, что хотите выйти из этого чата?")) return;
 
         try {
-            const response = await fetch(`/api/chats/${currentChatId}/leave/`, {
+            const response = await fetchWithRetry(`/api/chats/${currentChatId}/leave/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken')
@@ -203,6 +324,10 @@ document.addEventListener("DOMContentLoaded", function() {
             if (response.ok || response.status === 204) {
                 const chatItem = document.querySelector(`.chat-item[data-chat-id="${currentChatId}"]`);
                 if (chatItem) chatItem.remove();
+
+                delete chatCache[currentChatId];
+                localStorage.removeItem(`draft_${currentChatId}`);
+                localStorage.removeItem(`failed_${currentChatId}`);
 
                 currentChatId = null;
                 currentChatType = null;
@@ -222,12 +347,26 @@ document.addEventListener("DOMContentLoaded", function() {
             isLoadingHistory = true;
             const oldScrollHeight = container.scrollHeight;
 
+            const skeleton = document.createElement('div');
+            skeleton.innerHTML = `<div class="skeleton-message"></div><div class="skeleton-message" style="width: 50%;"></div>`;
+            container.prepend(skeleton);
+
             try {
-                const response = await fetch(nextPageUrl);
+                const response = await fetchWithRetry(nextPageUrl);
+                if (currentChatId !== currentChatId) return;
+
                 const data = await response.json();
                 nextPageUrl = data.next;
 
                 const messages = [...data.results].reverse();
+
+                if (chatCache[currentChatId]) {
+                    chatCache[currentChatId].messages = [...messages, ...chatCache[currentChatId].messages];
+                    chatCache[currentChatId].nextPageUrl = nextPageUrl;
+                }
+
+                skeleton.remove();
+
                 const fragment = document.createDocumentFragment();
                 messages.forEach(msg => {
                     const tempDiv = document.createElement('div');
@@ -240,6 +379,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             } catch (error) {
                 console.error("Ошибка загрузки истории", error);
+                skeleton.remove();
             } finally {
                 isLoadingHistory = false;
             }
@@ -249,14 +389,30 @@ document.addEventListener("DOMContentLoaded", function() {
     function createMessageHTML(msg) {
         const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
+        let rowClass = '';
+        let statusIcon = '';
+
+        if (msg.is_pending) {
+            rowClass = 'msg-pending';
+            statusIcon = '<span class="spinner"></span>';
+        } else if (msg.is_failed) {
+            rowClass = 'msg-failed';
+            statusIcon = '<i class="bi bi-exclamation-circle-fill text-danger" style="margin-left: 5px;"></i>';
+        }
+
+        let avatarUrl = msg.sender_avatar;
+        if (msg.is_pending || msg.is_failed) {
+            avatarUrl = window.APP_CONFIG.currentUserAvatar || "/static/images/avatars/default.png";
+        }
+
         return `
-            <div class="message-row">
-                <img src="${msg.sender_avatar}" class="message-avatar">
+            <div class="message-row ${rowClass}" id="msg-${msg.id}">
+                <img src="${avatarUrl}" class="message-avatar">
                 <div class="message-content">
                     <div class="message-header"><span class="message-author">${msg.sender_name}</span></div>
                     <div class="message-body">
                         <span class="message-text">${msg.text}</span>
-                        <span class="message-time">${time}</span>
+                        <span class="message-time">${time} ${statusIcon}</span>
                     </div>
                 </div>
             </div>
@@ -267,15 +423,31 @@ document.addEventListener("DOMContentLoaded", function() {
         container.insertAdjacentHTML('beforeend', createMessageHTML(msg));
     }
 
-    async function sendMessage() {
-        const text = textarea.value.trim();
+    async function sendMessage(textToSend = null) {
+        const text = textToSend || textarea.value.trim();
         if (!text || !currentChatId) return;
 
-        textarea.value = '';
-        textarea.style.height = 'auto';
+        if (!textToSend) {
+            textarea.value = '';
+            textarea.style.height = 'auto';
+            localStorage.removeItem(`draft_${currentChatId}`);
+        }
+
+        const tempId = 'temp_' + Date.now();
+        const tempMessage = {
+            id: tempId,
+            text: text,
+            sender_name: currentUser,
+            sender_avatar: window.APP_CONFIG.currentUserAvatar,
+            created_at: new Date().toISOString(),
+            is_pending: true
+        };
+
+        renderMessage(tempMessage);
+        scrollToBottom();
 
         try {
-            await fetch('/api/messages/', {
+            const response = await fetchWithRetry('/api/messages/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -283,12 +455,28 @@ document.addEventListener("DOMContentLoaded", function() {
                 },
                 body: JSON.stringify({ chat: currentChatId, text: text })
             });
+
+            if (!response.ok) throw new Error("Ошибка отправки");
+
+            const tempEl = document.getElementById(`msg-${tempId}`);
+            if (tempEl) tempEl.remove();
+
         } catch (error) {
-            console.error(error);
+            const tempEl = document.getElementById(`msg-${tempId}`);
+            if (tempEl) {
+                tempEl.classList.add('msg-failed');
+                tempEl.classList.remove('msg-pending');
+                const timeSpan = tempEl.querySelector('.message-time');
+                if (timeSpan) {
+                    timeSpan.innerHTML = `${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} <i class="bi bi-exclamation-circle-fill text-danger" style="margin-left: 5px;"></i>`;
+                }
+            }
+
+            saveFailedMessage(currentChatId, tempMessage);
         }
     }
 
-    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    document.getElementById('send-btn').addEventListener('click', () => sendMessage());
 
     // --- WEBSOCKET ---
     function connectGlobalWebSocket() {
@@ -303,7 +491,13 @@ document.addEventListener("DOMContentLoaded", function() {
             const data = JSON.parse(e.data);
 
             if (data.type === 'chat.message.new') {
-                if (data.payload.chat.id == currentChatId) {
+                const chatId = data.payload.chat.id;
+
+                if (chatCache[chatId]) {
+                    chatCache[chatId].messages.push(data.payload.message);
+                }
+
+                if (chatId == currentChatId) {
                     const isScrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
                     renderMessage(data.payload.message);
                     if (isScrolledToBottom) scrollToBottom();
@@ -312,24 +506,30 @@ document.addEventListener("DOMContentLoaded", function() {
             else if (data.type === 'chat.direct.created') {
                 addChatToList(data.payload.chat, data.payload.user);
             }
-            else if (data.type === 'chat.member.joined') {
-                if (data.payload.chat.id == currentChatId) {
-                    fetch(`/api/chats/${currentChatId}/members/`)
-                        .then(r => r.json())
-                        .then(d => {
-                            const count = d.count !== undefined ? d.count : d.results.length;
-                            document.getElementById('active-chat-members-count').innerText = `${count} участников`;
-                        });
+            else if (data.type === 'chat.member.joined' || data.type === 'chat.member.left') {
+                const chatId = data.payload.chat.id;
+
+                if (chatCache[chatId] && chatCache[chatId].membersCount !== null) {
+                    if (data.type === 'chat.member.joined') {
+                        chatCache[chatId].membersCount += 1;
+                    } else {
+                        chatCache[chatId].membersCount -= 1;
+                    }
                 }
-            }
-            else if (data.type === 'chat.member.left') {
-                if (data.payload.chat.id == currentChatId) {
-                    fetch(`/api/chats/${currentChatId}/members/`)
-                        .then(r => r.json())
-                        .then(d => {
-                            const count = d.count !== undefined ? d.count : d.results.length;
-                            document.getElementById('active-chat-members-count').innerText = `${count} участников`;
-                        });
+
+                if (chatId == currentChatId) {
+                    const cached = getCachedChat(chatId);
+                    if (cached && cached.membersCount !== null) {
+                        document.getElementById('active-chat-members-count').innerText = `${cached.membersCount} участников`;
+                    } else {
+                        fetch(`/api/chats/${currentChatId}/members/`)
+                            .then(r => r.json())
+                            .then(d => {
+                                const count = d.count !== undefined ? d.count : d.results.length;
+                                document.getElementById('active-chat-members-count').innerText = `${count} участников`;
+                                setCachedChat(chatId, { membersCount: count });
+                            });
+                    }
                 }
             }
             else if (data.type === 'chat.state.deleted') {
@@ -337,6 +537,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const chatItem = document.querySelector(`.chat-item[data-chat-id="${deletedChatId}"]`);
                 if (chatItem) chatItem.remove();
+
+                delete chatCache[deletedChatId];
+                localStorage.removeItem(`draft_${deletedChatId}`);
+                localStorage.removeItem(`failed_${deletedChatId}`);
 
                 if (currentChatId == deletedChatId) {
                     currentChatId = null;
@@ -354,6 +558,58 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     connectGlobalWebSocket();
+
+    // --- КОНТЕКСТНОЕ МЕНЮ ДЛЯ СООБЩЕНИЙ ---
+    container.addEventListener('click', function(e) {
+        const messageRow = e.target.closest('.message-row');
+
+        if (!messageRow || !messageRow.classList.contains('msg-failed')) {
+            msgMenu.style.display = 'none';
+            return;
+        }
+
+        e.preventDefault();
+        selectedMsgElement = messageRow;
+
+        const rect = messageRow.getBoundingClientRect();
+
+        let topPos = rect.bottom + window.scrollY;
+        if (rect.bottom + 100 > window.innerHeight) {
+            topPos = rect.top + window.scrollY - 100;
+        }
+
+        msgMenu.style.top = `${topPos}px`;
+        msgMenu.style.left = `${rect.left + window.scrollX + 20}px`;
+        msgMenu.style.display = 'block';
+        menuRetry.style.display = 'block';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!msgMenu.contains(e.target) && !e.target.closest('.message-row.msg-failed')) {
+            msgMenu.style.display = 'none';
+        }
+    });
+
+    menuRetry.addEventListener('click', function() {
+        if (!selectedMsgElement) return;
+        const text = selectedMsgElement.querySelector('.message-text').innerText;
+        const msgId = selectedMsgElement.id.replace('msg-', '');
+
+        clearFailedMessage(currentChatId, msgId);
+
+        selectedMsgElement.remove();
+        msgMenu.style.display = 'none';
+        sendMessage(text);
+    });
+
+    menuDelete.addEventListener('click', function() {
+        if (!selectedMsgElement) return;
+        const msgId = selectedMsgElement.id.replace('msg-', '');
+        clearFailedMessage(currentChatId, msgId);
+
+        selectedMsgElement.remove();
+        msgMenu.style.display = 'none';
+    });
 
     // --- ВСТРОЕННЫЙ ПОИСК ---
     searchInput.addEventListener('focus', () => {
@@ -424,11 +680,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
         try {
             if (currentTab === 'users') {
-                const res = await fetch(`/api/users/search/?q=${encodeURIComponent(query)}`);
+                const res = await fetchWithRetry(`/api/users/search/?q=${encodeURIComponent(query)}`);
                 const users = await res.json();
                 renderUsers(users);
             } else {
-                const res = await fetch(`/api/chats/search/?q=${encodeURIComponent(query)}`);
+                const res = await fetchWithRetry(`/api/chats/search/?q=${encodeURIComponent(query)}`);
                 const chats = await res.json();
                 renderChats(chats);
             }
@@ -568,7 +824,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!currentChatId || !confirm("Вы уверены, что хотите УДАЛИТЬ этот чат? Это действие необратимо.")) return;
 
         try {
-            const response = await fetch(`/api/chats/${currentChatId}/`, {
+            const response = await fetchWithRetry(`/api/chats/${currentChatId}/`, {
                 method: 'DELETE',
                 headers: { 'X-CSRFToken': getCookie('csrftoken') }
             });
@@ -578,6 +834,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const chatItem = document.querySelector(`.chat-item[data-chat-id="${currentChatId}"]`);
                 if (chatItem) chatItem.remove();
+
+                delete chatCache[currentChatId];
+                localStorage.removeItem(`draft_${currentChatId}`);
+                localStorage.removeItem(`failed_${currentChatId}`);
 
                 currentChatId = null;
                 currentChatType = null;
@@ -617,7 +877,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         try {
-            const response = await fetch('/api/chats/', {
+            const response = await fetchWithRetry('/api/chats/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -649,7 +909,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     async function startDirectChat(user) {
         try {
-            const response = await fetch('/api/chats/direct/', {
+            const response = await fetchWithRetry('/api/chats/direct/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -677,7 +937,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     async function joinAndOpenChat(chatId) {
         try {
-            const response = await fetch(`/api/chats/${chatId}/join/`, {
+            const response = await fetchWithRetry(`/api/chats/${chatId}/join/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken')
@@ -685,7 +945,7 @@ document.addEventListener("DOMContentLoaded", function() {
             });
 
             if (response.ok || response.status === 400) {
-                const chatRes = await fetch(`/api/chats/${chatId}/`);
+                const chatRes = await fetchWithRetry(`/api/chats/${chatId}/`);
                 if (chatRes.ok) {
                     const chatData = await chatRes.json();
 
@@ -713,12 +973,6 @@ document.addEventListener("DOMContentLoaded", function() {
         e.preventDefault();
         closeSearch();
     });
-    document.getElementById('open-create-chat-btn').addEventListener('click', () => {
-        newChatTitleInput.value = '';
-        newChatTypeSelect.value = 'GROUP';
-        createChatModal.style.display = 'flex';
-        newChatTitleInput.focus();
-    });
 
     document.getElementById('close-profile-btn').addEventListener('click', closeProfileModal);
     document.getElementById('close-chat-modal-btn').addEventListener('click', closeChatModal);
@@ -729,5 +983,5 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('leave-chat-btn').addEventListener('click', leaveChat);
     document.getElementById('settings-delete-chat-btn').addEventListener('click', deleteCurrentChat);
     document.getElementById('submit-create-chat-btn').addEventListener('click', submitCreateChat);
-    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    document.getElementById('send-btn').addEventListener('click', () => sendMessage());
 });

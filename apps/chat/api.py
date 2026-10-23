@@ -328,11 +328,23 @@ class ChatViewSet(viewsets.ModelViewSet):
         if not query:
             return Response({"detail": "Query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        chats = Chat.objects.filter(
-            Q(type__in=[Chat.Type.GROUP, Chat.Type.CHANNEL], title__icontains=query)
-            | Q(type=Chat.Type.DIRECT, memberships__user__username__icontains=query)
-            | Q(type=Chat.Type.DIRECT, memberships__user__display_name__icontains=query)
-        ).distinct()
+        chats = (
+            Chat.objects.filter(
+                Q(type__in=[Chat.Type.GROUP, Chat.Type.CHANNEL], title__icontains=query)
+                | Q(type=Chat.Type.DIRECT, memberships__user=request.user)
+            )
+            .filter(
+                ~Q(type=Chat.Type.DIRECT)
+                | Q(memberships__user__username__icontains=query)
+                | Q(memberships__user__display_name__icontains=query)
+            )
+            .exclude(
+                Q(type=Chat.Type.DIRECT, memberships__user=request.user)
+                & ~Q(memberships__user__username__icontains=query)
+                & ~Q(memberships__user__display_name__icontains=query)
+            )
+            .distinct()
+        )
         chats = chats[:10]
 
         serializer = self.get_serializer(chats, many=True, context={"request": request})

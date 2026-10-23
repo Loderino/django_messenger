@@ -40,15 +40,6 @@
         opacity: 1;
     }
 
-    .logo-text {
-        font-weight: 800;
-        font-size: 28px;
-        color: var(--vk-blue);
-        text-align: center;
-        margin-bottom: 20px;
-        letter-spacing: -1px;
-    }
-
     .vk-btn {
         background-color: var(--vk-blue);
         color: white;
@@ -107,6 +98,7 @@
         opacity: 0.7;
         transition: 0.2s;
     }
+
     .method-btn.active-method {
         cursor: pointer;
         opacity: 1;
@@ -157,34 +149,22 @@
             {% endif %}
 
             <div class="mb-3">
-                <label for="id_login" class="form-label">Логин</label>
-                <input type="text" name="login" class="form-control" id="id_login" required>
+                <label for="id_login" class="form-label">Логин или Email</label>
+                <input type="text" name="login" class="form-control" id="id_login" required placeholder="Введите логин или почту">
             </div>
 
-            <div class="mb-3">
+            <div class="mb-4">
                 <label for="id_password" class="form-label">Пароль</label>
                 <input type="password" name="password" class="form-control" id="id_password" required>
             </div>
 
-            <button type="submit" class="btn vk-btn mb-2">Войти</button>
+            <button type="submit" class="btn vk-btn mb-3">Войти</button>
         </form>
 
-        <div class="text-center mb-3">
+        <!-- Блок ссылок под кнопкой -->
+        <div class="d-flex flex-column align-items-center gap-2 mb-3">
             <a href="{% url 'account_signup' %}" style="color: var(--vk-blue); text-decoration: none; font-size: 14px;">Еще не с нами? Зарегистрироваться</a>
-        </div>
-
-        <div class="alt-methods">
-            <div class="alt-methods-title">Другие способы</div>
-
-            <a href="#" class="method-btn active-method" title="Войти по паролю">
-                <i class="bi bi-key"></i> Логин и пароль
-            </a>
-            <button class="method-btn" disabled>
-                <i class="bi bi-envelope"></i> Электронная почта (скоро)
-            </button>
-            <button class="method-btn" disabled>
-                <i class="bi bi-qr-code"></i> QR-код (скоро)
-            </button>
+            <a href="{% url 'account_reset_password' %}" style="color: var(--vk-blue); opacity: 0.8; text-decoration: none; font-size: 13px; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">Забыли пароль?</a>
         </div>
 
         <div class="alt-methods">

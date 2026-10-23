@@ -76,9 +76,11 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-ACCOUNT_LOGIN_METHODS = {"username"}
-ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
-ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_UNIQUE_EMAIL = True
+
 SOCIALACCOUNT_PROVIDERS = {}
 
 LOGIN_REDIRECT_URL = "/chats/"
@@ -97,9 +99,17 @@ STATICFILES_DIRS = [
 
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": os.environ["EMAIL_HOST"],
+            "port": os.environ["EMAIL_PORT"],
+            "username": os.environ["EMAIL_USERNAME"],
+            "password": os.environ["EMAIL_PASSWORD"],
+            "use_ssl": True,
+        },
     },
 }
+DEFAULT_FROM_EMAIL = os.environ["EMAIL_USERNAME"]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

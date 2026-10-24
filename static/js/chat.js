@@ -404,12 +404,21 @@ document.addEventListener("DOMContentLoaded", function() {
         if (msg.is_pending || msg.is_failed) {
             avatarUrl = window.APP_CONFIG.currentUserAvatar || "/static/images/avatars/default.png";
         }
+        const profileUrl = (msg.is_pending || msg.is_failed) ? '#' : `/user/${msg.sender}/`;
+
+        const avatarTag = (msg.is_pending || msg.is_failed)
+            ? `<img src="${avatarUrl}" class="message-avatar">`
+            : `<a href="${profileUrl}"><img src="${avatarUrl}" class="message-avatar" target="blank_"></a>`;
+
+        const nameTag = (msg.is_pending || msg.is_failed)
+            ? `<span class="message-author">${msg.sender_name}</span>`
+            : `<a href="${profileUrl}" class="message-author" style="text-decoration: none;" target="blank_">${msg.sender_name}</a>`;
 
         return `
             <div class="message-row ${rowClass}" id="msg-${msg.id}">
-                <img src="${avatarUrl}" class="message-avatar">
+                ${avatarTag}
                 <div class="message-content">
-                    <div class="message-header"><span class="message-author">${msg.sender_name}</span></div>
+                    <div class="message-header">${nameTag}</div>
                     <div class="message-body">
                         <span class="message-text">${msg.text}</span>
                         <span class="message-time">${time} ${statusIcon}</span>
@@ -423,7 +432,7 @@ document.addEventListener("DOMContentLoaded", function() {
         container.insertAdjacentHTML('beforeend', createMessageHTML(msg));
     }
 
-    async function sendMessage(textToSend = null) {
+        async function sendMessage(textToSend = null) {
         const text = textToSend || textarea.value.trim();
         if (!text || !currentChatId) return;
 
@@ -456,10 +465,36 @@ document.addEventListener("DOMContentLoaded", function() {
                 body: JSON.stringify({ chat: currentChatId, text: text })
             });
 
-            if (!response.ok) throw new Error("Ошибка отправки");
+            if (response.ok) {
+                const data = await response.json();
+                const tempEl = document.getElementById(`msg-${tempId}`);
+                if (tempEl) tempEl.remove();
 
-            const tempEl = document.getElementById(`msg-${tempId}`);
-            if (tempEl) tempEl.remove();
+                const message = {
+                    id: data.id,
+                    sender: window.APP_CONFIG.currentUserId, // <-- Важно добавить sender для кэша
+                    text: text,
+                    sender_name: currentUser,
+                    sender_avatar: window.APP_CONFIG.currentUserAvatar,
+                    created_at: data.created_at || new Date().toISOString(), // лучше брать с бэка, если есть
+                    is_pending: false
+                };
+
+                if (!document.getElementById(`msg-${message.id}`)) {
+                    renderMessage(message);
+                    scrollToBottom();
+                }
+
+                if (chatCache[currentChatId]) {
+                    const exists = chatCache[currentChatId].messages.some(m => m.id === message.id);
+                    if (!exists) {
+                        chatCache[currentChatId].messages.push(message);
+                    }
+                }
+
+            } else {
+                throw new Error("Ошибка отправки");
+            }
 
         } catch (error) {
             const tempEl = document.getElementById(`msg-${tempId}`);
@@ -497,7 +532,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     chatCache[chatId].messages.push(data.payload.message);
                 }
 
-                if (chatId == currentChatId) {
+                if (chatId == currentChatId && data.payload.message.sender_name !== currentUser) {
                     const isScrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
                     renderMessage(data.payload.message);
                     if (isScrolledToBottom) scrollToBottom();
@@ -707,8 +742,8 @@ document.addEventListener("DOMContentLoaded", function() {
             div.innerHTML = `
                 <img src="${user.avatar_url}" class="vk-avatar" style="width: 36px; height: 36px;">
                 <div>
-                    <div class="fw-bold">${user.public_name}</div>
-                    <small class="text-muted">@${user.username}</small>
+                    <div class="fw-bold">${user.display_name}</div>
+                    <small class="text-muted">@${user.display_name}</small>
                 </div>
             `;
             div.onclick = () => openProfileModal(user);
@@ -748,8 +783,8 @@ document.addEventListener("DOMContentLoaded", function() {
             <img src="${user.avatar_url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
             <div class="online-dot"></div>
         `;
-        modalName.innerText = user.public_name;
-        modalUsername.innerText = `@${user.username}`;
+        modalName.innerText = user.display_name;
+        modalUsername.innerText = `@${user.display_name}`;
         modalWriteBtn.onclick = () => {
             closeProfileModal();
             startDirectChat(user);
@@ -890,7 +925,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const chat = await response.json();
                 closeCreateChatModal();
 
-                const fakeUser = { public_name: title[0], avatar_url: null };
+                const fakeUser = { display_name: title[0], avatar_url: null };
                 addChatToList(chat, fakeUser);
 
                 const newChatItem = document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`);
@@ -927,7 +962,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (newChatItem) {
                     document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
                     newChatItem.classList.add('active');
-                    openChat(chat.id, user.public_name, chat.type);
+                    openChat(chat.id, user.display_name, chat.type);
                 }
             }
         } catch (error) {
@@ -950,7 +985,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     const chatData = await chatRes.json();
 
                     const fakeUser = {
-                        public_name: chatData.title ? chatData.title[0] : 'G',
+                        display_name: chatData.title ? chatData.title[0] : 'G',
                         avatar_url: null
                     };
 

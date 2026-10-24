@@ -1,0 +1,31 @@
+{% load static %}
+<div class="vk-topbar">
+    <div class="topbar-inner">
+        <a href="/" class="vk-logo">
+            <img src="{% static 'images/logos/logo.png' %}" alt="Лосёво">
+            <span>Лосёво</span>
+        </a>
+
+        <!-- Блок поиска (опционально) -->
+        {% block topbar_search %}
+        <input type="text" class="vk-search" placeholder="Поиск...">
+        {% endblock %}
+
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <button class="btn btn-sm btn-outline-light border-0" onclick="toggleTheme()" title="Сменить тему">
+                <i class="bi bi-moon-stars-fill fs-5" id="themeIcon"></i>
+            </button>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/user/{% if request.user.display_name %}{{ request.user.display_name }}{% else %}{{ request.user.id }}{% endif %}/" class="text-white text-decoration-none fw-medium" style="font-size: 15px;">
+                    {{ request.user.display_name }}
+                </a>
+                <form method="post" action="{% url 'account_logout' %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-light border-0" title="Выйти">
+                        <i class="bi bi-box-arrow-right fs-5"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

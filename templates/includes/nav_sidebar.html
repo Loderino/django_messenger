@@ -1,0 +1,10 @@
+{% load static %}
+<div class="nav-sidebar">
+    <a href="/chats/" class="nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}" title="Чаты">
+        <i class="bi bi-chat-dots"></i>
+    </a>
+
+    <a href="/user/{% if request.user.display_name %}{{ request.user.display_name }}{% else %}{{ request.user.id }}{% endif %}/" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" title="Моя страница">
+        <img src="{{ request.user.avatar_url }}" alt="Профиль" class="nav-avatar">
+    </a>
+</div>

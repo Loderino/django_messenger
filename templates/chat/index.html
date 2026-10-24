@@ -5,45 +5,6 @@
 
 {% block extra_css %}
 <style>
-    /* --- ТОП-БАР --- */
-    .vk-topbar {
-        background-color: var(--vk-blue);
-        height: 60px;
-        display: flex;
-        align-items: center;
-        padding: 0 20px;
-        color: white;
-        flex-shrink: 0;
-        z-index: 10;
-    }
-    .topbar-inner {
-        max-width: 1280px;
-        margin: 0 auto;
-        width: 100%;
-        display: flex;
-        align-items: center;
-    }
-
-    .vk-logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-right: 30px;
-        font-weight: 700;
-        font-size: 22px;
-        text-decoration: none;
-        color: white;
-    }
-
-    .vk-logo img {
-        height: 40px;
-        width: auto;
-        object-fit: contain;
-    }
-
-    .vk-search { background: rgba(255,255,255,0.2); border: none; border-radius: 2px; padding: 6px 12px; color: white; width: 280px; font-size: 14px; }
-    .vk-search::placeholder { color: rgba(255,255,255,0.7); }
-
     /* --- ОСНОВНОЙ КОНТЕНТ --- */
     .main-wrapper {
         flex-grow: 1;
@@ -66,8 +27,16 @@
         overflow: hidden;
     }
 
-    /* --- ЛЕВАЯ ПАНЕЛЬ --- */
-    .sidebar { width: 360px; background-color: var(--sidebar-bg); display: flex; flex-direction: column; border-right: 1px solid var(--vk-border); flex-shrink: 0; position: relative; }
+    /* --- ЛЕВАЯ ПАНЕЛЬ (СПИСОК ЧАТОВ) --- */
+    .sidebar {
+        width: 360px;
+        background-color: var(--sidebar-bg);
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--vk-border);
+        flex-shrink: 0;
+        position: relative;
+    }
 
     .search-container {
         padding: 12px 16px;
@@ -263,32 +232,14 @@
 {% endblock %}
 
 {% block content %}
-    <div class="vk-topbar">
-        <div class="topbar-inner">
-            <a href="/" class="vk-logo">
-                <img src="{% static 'images/logos/logo.png' %}" alt="Лосёво">
-                <span>Лосёво</span>
-            </a>
-            <input type="text" class="vk-search" placeholder="Поиск...">
-            <div class="ms-auto d-flex align-items-center gap-3">
-                <button class="btn btn-sm btn-outline-light border-0" onclick="toggleTheme()" title="Сменить тему">
-                    <i class="bi bi-moon-stars-fill fs-5" id="themeIcon"></i>
-                </button>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-medium" style="font-size: 15px;">{{ request.user.public_name }}</span>
-                    <form method="post" action="{% url 'account_logout' %}" style="margin: 0;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-light border-0" title="Выйти">
-                            <i class="bi bi-box-arrow-right fs-5"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include 'includes/topbar.html' %}
 
     <div class="main-wrapper">
         <div class="main-content">
+
+            <!-- ВСТАВЛЕНА НАВИГАЦИЯ -->
+            {% include 'includes/nav_sidebar.html' %}
+
             <div class="sidebar">
                 <div class="search-container" id="search-container">
                     <div class="search-input-wrapper">
@@ -450,7 +401,7 @@
 {% block extra_js %}
 <script>
     window.APP_CONFIG = {
-        currentUser: "{{ request.user.public_name }}",
+        currentUser: "{{ request.user.display_name }}",
         currentUserAvatar: "{{ request.user.avatar_url }}"
     };
 </script>

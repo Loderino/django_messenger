@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ display_name }} — Лосёво{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* --- ОСНОВНОЙ КОНТЕНТ --- */
+    .main-wrapper {
+        flex-grow: 1;
+        display: flex;
+        justify-content: center;
+        overflow: hidden;
+        padding-top: 20px;
+    }
+
+    .main-content {
+        width: 100%;
+        max-width: 1280px;
+        display: flex;
+        background-color: var(--chat-bg);
+        border: 1px solid var(--vk-border);
+        border-bottom: none;
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    /* --- РАБОЧАЯ ОБЛАСТЬ ПРОФИЛЯ --- */
+    .profile-page {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--sidebar-bg);
+        overflow-y: auto;
+    }
+
+    .profile-card {
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: hidden;
+        height: fit-content;
+        min-height: 100%;
+    }
+
+    .profile-header {
+        background-color: var(--vk-blue);
+        height: 120px;
+        position: relative;
+    }
+
+    .profile-main {
+        padding: 0 30px 30px 30px;
+    }
+
+    .profile-avatar-container {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        margin-top: -70px;
+        z-index: 2;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .profile-avatar-wrap {
+        width: 100%;
+        height: 100%;
+        border-radius: 4px;
+        border: 4px solid var(--sidebar-bg);
+        background: var(--vk-blue);
+        color: white;
+        font-size: 56px;
+        font-weight: 600;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    .profile-avatar-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 2px;
+    }
+
+    .avatar-upload-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        border-radius: 4px;
+        font-size: 24px;
+        pointer-events: none;
+    }
+
+    .profile-avatar-container:hover .avatar-upload-overlay {
+        opacity: 1;
+    }
+
+    .profile-online-dot {
+        position: absolute;
+        bottom: -6px;
+        right: -6px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #4caf50;
+        border: 4px solid var(--sidebar-bg);
+        z-index: 3;
+    }
+
+    /* Заголовки */
+    .profile-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-main);
+        line-height: 1.2;
+        margin-bottom: 6px;
+    }
+
+    /* Плашка @username */
+    .username-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .profile-username {
+        display: inline-flex;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--vk-blue);
+        background: rgba(74, 118, 168, 0.1);
+        padding: 2px 8px;
+        border-radius: 4px;
+        transition: border 0.2s;
+    }
+    [data-bs-theme="dark"] .profile-username {
+        color: #71a0d6;
+        background: rgba(113, 160, 214, 0.15);
+    }
+
+    /* Стили для инлайн-инпута внутри плашки */
+    .inline-username-input {
+        background: transparent;
+        border: none;
+        color: inherit;
+        font: inherit;
+        outline: none;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        min-width: 50px; /* Чтобы было куда кликать */
+    }
+
+    .edit-icon {
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: color 0.2s;
+        font-size: 16px;
+    }
+    .edit-icon:hover {
+        color: var(--vk-blue);
+    }
+
+    .validation-msg {
+        font-size: 12px;
+        margin-top: 4px;
+        display: none;
+    }
+
+    .profile-status-line {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    /* Метаданные */
+    .profile-meta-line {
+        font-size: 13px;
+        color: var(--text-muted);
+        display: flex;
+        gap: 15px;
+    }
+    .profile-meta-line span {
+        display: flex;
+        align-items: center;
+    }
+    .profile-meta-line span:not(:last-child)::after {
+        content: "•";
+        margin-left: 15px;
+        color: var(--vk-border);
+    }
+
+    /* Блок "О себе" */
+    .profile-bio-block {
+        background: var(--active-chat-bg);
+        border: 1px solid var(--vk-border);
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 25px;
+    }
+
+    .profile-bio-title {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
+    }
+
+    .profile-bio-text {
+        font-size: 14px;
+        color: var(--text-main);
+        line-height: 1.4;
+        white-space: pre-wrap;
+    }
+
+    /* Инлайн textarea для био */
+    .inline-input.textarea {
+        width: 100%;
+        border: 1px solid var(--vk-blue);
+        border-radius: 4px;
+        padding: 8px;
+        background-color: var(--sidebar-bg);
+        color: var(--text-main);
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 60px;
+        outline: none;
+        margin-top: 5px;
+    }
+
+    /* Стенка */
+    .profile-wall {
+        margin-top: 30px;
+        border-top: 1px solid var(--vk-border);
+        padding-top: 20px;
+    }
+
+    .profile-wall-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 15px;
+        color: var(--text-main);
+    }
+
+    .profile-wall-empty {
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 14px;
+        padding: 30px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    {% include 'includes/topbar.html' %}
+
+    <div class="main-wrapper">
+        <div class="main-content">
+
+            {% include 'includes/nav_sidebar.html' %}
+
+            <div class="profile-page">
+                <div class="profile-card">
+                    <div class="profile-header"></div>
+
+                    <div class="profile-main">
+                        <div class="d-flex align-items-start gap-4">
+
+                            <div class="profile-avatar-container" id="avatar-container" {% if is_self %}title="Изменить аватар"{% endif %}>
+                                <div class="profile-avatar-wrap" id="profile-avatar">
+                                    {% if avatar_url %}
+                                        <img src="{{ avatar_url }}" alt="{{ display_name }}">
+                                    {% else %}
+                                        {{ display_name|first|upper }}
+                                    {% endif %}
+                                </div>
+                                {% if is_self %}
+                                    <div class="avatar-upload-overlay"><i class="bi bi-camera-fill"></i></div>
+                                    <input type="file" id="avatar-input" accept="image/*" style="display: none;">
+                                {% endif %}
+                                {% if is_online %}
+                                    <div class="profile-online-dot"></div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-2 flex-grow-1">
+                                <!-- Заголовок (username для себя, display_name для других) -->
+                                <div class="profile-title" id="profile-title">
+                                    {% if is_self %}{{ username }}{% else %}{{ display_name }}{% endif %}
+                                </div>
+
+                                <!-- Плашка @display_name -->
+                                <div class="username-wrapper" id="username-wrapper">
+                                    <div class="profile-username" id="username-badge">
+                                        @<span id="username-text">{{ display_name }}</span>
+                                        <!-- Сюда будет вставляться инпут при редактировании -->
+                                        <input type="text" id="inline-name-input" class="inline-username-input" maxlength="15" style="display: none;">
+                                    </div>
+                                    {% if is_self %}
+                                        <i class="bi bi-pencil-square edit-icon" id="edit-name-btn" title="Изменить имя"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="validation-msg" id="name-validation-msg"></div>
+
+                                <div class="profile-status-line" id="profile-status">
+                                    {% if is_online %}
+                                        <span style="color: #4caf50; font-weight: 500;">В сети</span>
+                                    {% elif last_seen %}
+                                        Был(а) в сети: {{ last_seen|date:"d.m.Y H:i" }}
+                                    {% else %}
+                                        Был(а) Недавно
+                                    {% endif %}
+                                </div>
+
+                                <div class="profile-meta-line">
+                                    <span>ID: {{ profile_user.id }}</span>
+                                    <span>Регистрация: {{ profile_user.date_joined|date:"d.m.Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Блок "О себе" с иконкой -->
+                        <div class="profile-bio-block" id="bio-wrapper">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div class="profile-bio-title m-0">О себе</div>
+                                {% if is_self %}
+                                    <i class="bi bi-pencil-square edit-icon m-0" id="edit-bio-btn" title="Изменить описание"></i>
+                                {% endif %}
+                            </div>
+                            <div class="profile-bio-text" id="bio-text">{{ bio|default:"Пользователь пока ничего не рассказал о себе." }}</div>
+                        </div>
+
+                        <!-- Стенка -->
+                        <div class="profile-wall">
+                            <div class="profile-wall-title">Стенка</div>
+                            <div class="profile-wall-empty">
+                                <i class="bi bi-file-post" style="font-size: 32px; opacity: 0.5;"></i>
+                                <div class="mt-2">Здесь скоро появятся посты.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-data"
+         data-user-id="{{ profile_user.id }}"
+         data-is-self="{% if is_self %}true{% else %}false{% endif %}"
+         style="display:none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/profile.js' %}"></script>
+{% endblock %}

@@ -66,7 +66,7 @@ class Chat(models.Model):
         if self.type == self.Type.DIRECT:
             other_member = self.memberships.exclude(user=user).first()
             if other_member:
-                return other_member.user.public_name
+                return other_member.user.display_name
             return "Удаленный пользователь"
 
         return f"Chat #{self.pk}"

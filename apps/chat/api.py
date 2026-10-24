@@ -78,7 +78,7 @@ class ChatViewSet(viewsets.ModelViewSet):
                         },
                         "user": {
                             "id": self.request.user.id,
-                            "public_name": self.request.user.public_name,
+                            "display_name": self.request.user.display_name,
                             "avatar_url": self.request.user.avatar_url,
                         },
                     },
@@ -196,7 +196,7 @@ class ChatViewSet(viewsets.ModelViewSet):
                     },
                     "user": {
                         "id": other_user.id,
-                        "public_name": other_user.public_name,
+                        "display_name": other_user.display_name,
                         "avatar_url": other_user.avatar_url,
                     },
                 },
@@ -255,7 +255,7 @@ class ChatViewSet(viewsets.ModelViewSet):
                     },
                     "user": {
                         "id": request.user.id,
-                        "public_name": request.user.public_name,
+                        "display_name": request.user.display_name,
                         "avatar_url": request.user.avatar_url,
                     },
                 },
@@ -307,7 +307,7 @@ class ChatViewSet(viewsets.ModelViewSet):
                     },
                     "user": {
                         "id": request.user.id,
-                        "public_name": request.user.public_name,
+                        "display_name": request.user.display_name,
                         "avatar_url": request.user.avatar_url,
                     },
                 },
@@ -412,7 +412,7 @@ class MessageViewSet(
                     "message": {
                         "id": message.id,
                         "text": message.text,
-                        "sender_name": message.sender.public_name,
+                        "sender_name": message.sender.display_name,
                         "sender_avatar": message.sender.avatar_url,
                         "created_at": message.created_at.isoformat(),
                     },

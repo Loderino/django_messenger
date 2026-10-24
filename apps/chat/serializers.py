@@ -89,7 +89,7 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields: ClassVar[list[str]] = ["id", "sender", "created_at", "updated_at"]
 
     def get_sender_name(self, obj):
-        return obj.sender.public_name
+        return obj.sender.display_name
 
     def get_sender_avatar(self, obj):
         return obj.sender.avatar_url
@@ -107,16 +107,16 @@ class MessageUpdateSerializer(MessageSerializer):
 
 
 class MembershipSerializer(serializers.ModelSerializer):
-    public_name = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Membership
-        fields: ClassVar[list[str]] = ["id", "chat", "user", "public_name", "avatar_url", "role", "joined_at"]
+        fields: ClassVar[list[str]] = ["id", "chat", "user", "display_name", "avatar_url", "role", "joined_at"]
         read_only_fields: ClassVar[list[str]] = ["id", "joined_at"]
-
-    def get_public_name(self, obj):
-        return obj.user.public_name
 
     def get_avatar_url(self, obj):
         return obj.user.avatar_url
+
+    def get_display_name(self, obj):
+        return obj.user.display_name

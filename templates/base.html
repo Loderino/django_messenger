@@ -60,6 +60,97 @@
             height: 100vh;
             transition: background-color 0.3s, color 0.3s;
         }
+
+        /* Контейнер для страниц без внутренней прокрутки (как чат) */
+        .app-layout {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Узкая навигационная панель слева */
+        .nav-sidebar {
+            width: 70px;
+            background-color: var(--header-bg);
+            border-right: 1px solid var(--vk-border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 0;
+            gap: 15px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .nav-item {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 20px;
+            transition: 0.2s;
+            text-decoration: none;
+        }
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--active-chat-bg);
+            color: var(--vk-blue);
+        }
+        .nav-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .nav-item.active .nav-avatar {
+            border: 2px solid var(--vk-blue);
+        }
+
+        .vk-topbar {
+            background-color: var(--vk-blue);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            color: white;
+            flex-shrink: 0;
+            z-index: 10;
+            width: 100%;
+        }
+        .topbar-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .vk-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-right: 30px;
+            font-weight: 700;
+            font-size: 22px;
+            text-decoration: none;
+            color: white;
+        }
+        .vk-logo img {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+        }
+        .vk-search {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 2px;
+            padding: 6px 12px;
+            color: white;
+            width: 280px;
+            font-size: 14px;
+        }
+        .vk-search::placeholder { color: rgba(255,255,255,0.7); }
     </style>
 
     {% block extra_css %}{% endblock %}

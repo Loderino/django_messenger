@@ -18,6 +18,7 @@ urlpatterns = [
     path("", RedirectView.as_view(pattern_name="index", permanent=False)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("favicon.ico", RedirectView.as_view(url="/static/images/favicon.png", permanent=True)),
 ]
 
 if settings.DEBUG:

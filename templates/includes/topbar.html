@@ -17,7 +17,7 @@
             </button>
             <div class="d-flex align-items-center gap-2">
                 <a href="/user/{% if request.user.display_name %}{{ request.user.display_name }}{% else %}{{ request.user.id }}{% endif %}/" class="text-white text-decoration-none fw-medium" style="font-size: 15px;">
-                    {{ request.user.display_name }}
+                    {{ request.user.username }}
                 </a>
                 <form method="post" action="{% url 'account_logout' %}" style="margin: 0;">
                     {% csrf_token %}

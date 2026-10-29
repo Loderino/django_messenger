@@ -13,6 +13,16 @@ document.addEventListener("DOMContentLoaded", function() {
     let selectedUser = null;
     let selectedChatForModal = null;
 
+    function escapeHTML(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     // --- КЭШ ---
     const chatCache = {};
 
@@ -151,6 +161,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function addChatToList(chat, user) {
         if (document.querySelector(`.chat-item[data-chat-id="${chat.id}"]`)) return;
 
+        const titleToShow = escapeHTML(chat.display_title || chat.title || '?');
         const chatList = document.getElementById('chat-list');
         const emptyState = chatList.querySelector('.p-4.text-muted');
         if (emptyState) emptyState.remove();
@@ -173,7 +184,7 @@ document.addEventListener("DOMContentLoaded", function() {
             ${avatarHtml}
             <div class="flex-grow-1 min-w-0">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-truncate" style="font-size: 15px;">${chat.display_title || chat.title}</span>
+                    <span class="fw-bold text-truncate" style="font-size: 15px;">${titleToShow}</span>
                 </div>
                 <small class="text-muted text-truncate d-block" style="font-size: 13px;">
                     ${chat.type === 'DIRECT' ? 'Private dialog' : 'Group chat'}
@@ -408,11 +419,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
         const avatarTag = (msg.is_pending || msg.is_failed)
             ? `<img src="${avatarUrl}" class="message-avatar">`
-            : `<a href="${profileUrl}"><img src="${avatarUrl}" class="message-avatar" target="blank_"></a>`;
+            : `<a href="${profileUrl}"><img src="${avatarUrl}" class="message-avatar" target="_blank"></a>`;
 
         const nameTag = (msg.is_pending || msg.is_failed)
-            ? `<span class="message-author">${msg.sender_name}</span>`
-            : `<a href="${profileUrl}" class="message-author" style="text-decoration: none;" target="blank_">${msg.sender_name}</a>`;
+            ? `<span class="message-author">${escapeHTML(msg.sender_name)}</span>`
+            : `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer" class="message-author" style="text-decoration: none;">${escapeHTML(msg.sender_name)}</a>`;
 
         return `
             <div class="message-row ${rowClass}" id="msg-${msg.id}">
@@ -420,7 +431,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div class="message-content">
                     <div class="message-header">${nameTag}</div>
                     <div class="message-body">
-                        <span class="message-text">${msg.text}</span>
+                        <span class="message-text">${escapeHTML(msg.text)}</span>
                         <span class="message-time">${time} ${statusIcon}</span>
                     </div>
                 </div>
@@ -739,11 +750,12 @@ document.addEventListener("DOMContentLoaded", function() {
             const div = document.createElement('div');
             div.className = 'list-group-item';
             div.style.cursor = 'pointer';
+            const safeName = escapeHTML(user.display_name);
             div.innerHTML = `
                 <img src="${user.avatar_url}" class="vk-avatar" style="width: 36px; height: 36px;">
                 <div>
-                    <div class="fw-bold">${user.display_name}</div>
-                    <small class="text-muted">@${user.display_name}</small>
+                    <div class="fw-bold">${safeName}</div>
+                    <small class="text-muted">@${safeName}</small>
                 </div>
             `;
             div.onclick = () => openProfileModal(user);
@@ -762,13 +774,13 @@ document.addEventListener("DOMContentLoaded", function() {
             const div = document.createElement('div');
             div.className = 'list-group-item';
             div.style.cursor = 'pointer';
-            const titleToShow = chat.display_title || chat.title;
+            const titleToShow = escapeHTML(chat.display_title || chat.title);
 
             div.innerHTML = `
                 <div class="vk-avatar bg-secondary" style="width: 36px; height: 36px; font-size: 14px;">${titleToShow[0].toUpperCase()}</div>
                 <div>
                     <div class="fw-bold">${titleToShow}</div>
-                    <small class="text-muted">${chat.type}</small>
+                    <small class="text-muted">${escapeHTML(chat.type)}</small>
                 </div>
             `;
             div.onclick = () => openChatModal(chat);

@@ -1,6 +1,7 @@
 from typing import ClassVar
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
@@ -59,7 +60,15 @@ class UserViewSet(
     def perform_update(self, serializer):
         if serializer.instance.id != self.request.user.id:
             raise PermissionDenied("You can only edit your own profile.")
-        serializer.save()
+
+        old_avatar_name = serializer.instance.avatar.name if serializer.instance.avatar else None
+        instance = serializer.save()
+
+        new_avatar_name = instance.avatar.name if instance.avatar else None
+
+        if old_avatar_name and old_avatar_name != new_avatar_name:
+            storage = instance.avatar.storage
+            transaction.on_commit(lambda: storage.delete(old_avatar_name))
 
     @extend_schema(
         parameters=[

@@ -27,7 +27,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         is_self = request and request.user.is_authenticated and request.user.id == instance.id
         if not is_self:
-            for field in ("username", "display_name", "avatar", "block_status", "blocked_until"):
+            for field in ("username", "avatar", "block_status", "blocked_until"):
                 data.pop(field, None)
         return data
 

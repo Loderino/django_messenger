@@ -21,7 +21,7 @@ class CustomUserAdmin(UserAdmin):
             "Additional",
             {
                 "classes": ("wide",),
-                "fields": ("display_name", "avatar", "bio", "block_status", "blocked_until", "last_seen"),
+                "fields": ("email", "display_name", "avatar", "bio", "block_status", "blocked_until", "last_seen"),
             },
         ),
     )

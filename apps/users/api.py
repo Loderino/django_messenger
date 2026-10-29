@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import mixins, permissions, status, viewsets
+from rest_framework import mixins, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -54,9 +54,6 @@ class UserViewSet(
                 raise PermissionDenied("Only admins can view the full user list.")
         return mixins.ListModelMixin.list(self, request, *args, **kwargs)
 
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
     def perform_update(self, serializer):
         if serializer.instance.id != self.request.user.id:
             raise PermissionDenied("You can only edit your own profile.")
@@ -88,7 +85,7 @@ class UserViewSet(
             {
                 "id": u.id,
                 "display_name": u.display_name,
-                "username": u.username,
+                "bio": u.bio,
                 "avatar_url": u.avatar_url,
             }
             for u in users
@@ -101,6 +98,5 @@ class UserViewSet(
         if not name:
             return Response({"available": False, "detail": "Name is required."}, status=400)
 
-        # Исключаем текущего пользователя, чтобы он не блокировал сам себя
         is_taken = User.objects.filter(display_name__iexact=name).exclude(id=request.user.id).exists()
         return Response({"available": not is_taken})

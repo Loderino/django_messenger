@@ -12,7 +12,7 @@ class BlockStatus(models.TextChoices):
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     display_name = models.CharField(max_length=50, unique=True, default=None)
-    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    avatar = models.ImageField(upload_to="avatars/users/", blank=True, null=True)
     bio = models.TextField(max_length=500, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
     block_status = models.CharField(

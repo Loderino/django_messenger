@@ -25,7 +25,7 @@ def index(request):
                 "type_display": chat.get_type_display(),
                 "display_title": display_title,
                 "first_letter": display_title[0].upper() if display_title else "?",
-                "avatar_url": avatar_url,
+                "avatar_url": chat.avatar.url if chat.avatar else avatar_url,
             }
         )
 

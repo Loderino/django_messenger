@@ -10,8 +10,10 @@ User = get_user_model()
 
 class ChatSerializer(serializers.ModelSerializer):
     display_title = serializers.SerializerMethodField()
+    members_count = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
     user_role = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Chat
@@ -19,7 +21,11 @@ class ChatSerializer(serializers.ModelSerializer):
             "id",
             "type",
             "title",
+            "description",
+            "avatar",
+            "avatar_url",
             "display_title",
+            "members_count",
             "is_member",
             "user_role",
             "parent",
@@ -33,12 +39,26 @@ class ChatSerializer(serializers.ModelSerializer):
             return obj.get_display_title(request.user)
         return obj.title or f"Chat #{obj.pk}"
 
+    def get_members_count(self, obj):
+        if hasattr(obj, "_members_count"):
+            return obj._members_count
+        return obj.memberships.count()
+
     def get_is_member(self, obj):
         request = self.context.get("request")
         if request and request.user:
-            # Проверяем наличие связи
             return obj.memberships.filter(user=request.user).exists()
         return False
+
+    def get_avatar_url(self, obj):
+        request = self.context.get("request")
+        if obj.avatar:
+            return obj.avatar.url
+        if obj.type == Chat.Type.DIRECT and request and request.user:
+            membership = obj.memberships.exclude(user=request.user).first()
+            if membership:
+                return membership.user.avatar_url
+        return None
 
     def get_user_role(self, obj):
         request = self.context.get("request")

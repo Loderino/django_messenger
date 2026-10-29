@@ -3,7 +3,7 @@ from typing import ClassVar
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import Count, OuterRef, Q, Subquery
 
 from .managers import ActiveMessageManager
 
@@ -21,9 +21,22 @@ class ChatQuerySet(models.QuerySet):
         """Returns only chats where user is a member. Includes topics where user is a member."""
         return self.active().filter(Q(memberships__user=user) | Q(parent__memberships__user=user)).distinct()
 
+    def for_user_search(self, user):
+        """Returns only direct chats where user is a member and public groups and channels."""
+        return (
+            self.active()
+            .filter(Q(type__in=[Chat.Type.GROUP, Chat.Type.CHANNEL]) | Q(type=Chat.Type.DIRECT, memberships__user=user))
+            .distinct()
+        )
+
     def public(self):
-        """Returns only public chats."""
+        """Returns only public GROUP and CHANNEL chats."""
         return self.active().exclude(type__in=[Chat.Type.DIRECT, Chat.Type.TOPIC])
+
+    def with_members_count(self):
+        members_count_subquery = Chat.objects.filter(id=OuterRef("pk")).annotate(c=Count("memberships")).values("c")
+
+        return self.annotate(_members_count=Subquery(members_count_subquery))
 
 
 class Chat(models.Model):
@@ -35,6 +48,8 @@ class Chat(models.Model):
 
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.DIRECT)
     title = models.CharField(max_length=100, blank=True)
+    description = models.TextField(max_length=1024, blank=True, null=True, default=None)
+    avatar = models.ImageField(upload_to="avatars/chats/", blank=True, null=True, default=None)
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="topics")
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)

@@ -37,7 +37,22 @@ class ChatViewSet(viewsets.ModelViewSet):
             return Chat.objects.active()
 
         if self.action == "search":
-            return Chat.objects.public()
+            return Chat.objects.for_user_search(self.request.user).with_members_count()
+
+        if self.action == "direct":
+            return Chat.objects.for_user(self.request.user)
+
+        if self.action == "members":
+            return Chat.objects.for_user_search(self.request.user)
+
+        if self.action == "messages":
+            return Chat.objects.for_user_search(self.request.user)
+
+        if self.action == "retrieve":
+            return Chat.objects.for_user_search(self.request.user).with_members_count()
+
+        if self.action == "list":
+            return Chat.objects.for_user(self.request.user).with_members_count()
 
         return Chat.objects.for_user_with_topics(self.request.user)
 
@@ -147,7 +162,31 @@ class ChatViewSet(viewsets.ModelViewSet):
 
             if not is_admin_or_owner:
                 raise PermissionDenied("Only admins or owners can edit this chat.")
-        serializer.save()
+
+        old_avatar_name = chat.avatar.name if chat.avatar else None
+        chat = serializer.save()
+        new_avatar_name = chat.avatar.name if chat.avatar else None
+
+        if old_avatar_name and old_avatar_name != new_avatar_name:
+            storage = chat._meta.get_field("avatar").storage
+            transaction.on_commit(lambda: storage.delete(old_avatar_name))
+
+        channel_layer = get_channel_layer()
+        target_group_id = chat.parent_id if chat.type == Chat.Type.TOPIC else chat.id
+
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{target_group_id}",
+            {
+                "type": "chat_updated",
+                "payload": {
+                    "chat": serializer.data,
+                    "user": {
+                        "id": user.id,
+                        "display_name": user.display_name,
+                    },
+                },
+            },
+        )
 
     @action(detail=False, methods=["post"])
     def direct(self, request):
@@ -160,7 +199,8 @@ class ChatViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You cannot create a direct chat with yourself.")
 
         existing_chat = (
-            Chat.objects.filter(type=Chat.Type.DIRECT, memberships__user=request.user)
+            self.get_queryset()
+            .filter(type=Chat.Type.DIRECT, memberships__user=request.user)
             .filter(memberships__user=other_user)
             .first()
         )
@@ -329,23 +369,13 @@ class ChatViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         chats = (
-            Chat.objects.filter(
-                Q(type__in=[Chat.Type.GROUP, Chat.Type.CHANNEL], title__icontains=query)
-                | Q(type=Chat.Type.DIRECT, memberships__user=request.user)
-            )
+            self.get_queryset()
             .filter(
-                ~Q(type=Chat.Type.DIRECT)
-                | Q(memberships__user__username__icontains=query)
-                | Q(memberships__user__display_name__icontains=query)
-            )
-            .exclude(
-                Q(type=Chat.Type.DIRECT, memberships__user=request.user)
-                & ~Q(memberships__user__username__icontains=query)
-                & ~Q(memberships__user__display_name__icontains=query)
+                Q(type__in=[Chat.Type.GROUP, Chat.Type.CHANNEL], title__icontains=query)
+                | Q(type=Chat.Type.DIRECT, memberships__user__display_name__icontains=query)
             )
             .distinct()
-        )
-        chats = chats[:10]
+        )[:10]
 
         serializer = self.get_serializer(chats, many=True, context={"request": request})
         return Response(serializer.data)
@@ -354,7 +384,7 @@ class ChatViewSet(viewsets.ModelViewSet):
     def members(self, request, pk=None):
         chat = self.get_object()
         is_member = Membership.objects.filter(chat=chat, user=request.user).exists()
-        if not is_member:
+        if not is_member and chat.type == Chat.Type.DIRECT:
             raise PermissionDenied("You do not have permission to view this chat members.")
 
         memberships = Membership.objects.filter(chat=chat).select_related("user").order_by("joined_at")

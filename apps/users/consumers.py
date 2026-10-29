@@ -78,8 +78,10 @@ class UserConsumer(AsyncWebsocketConsumer):
 
     async def chat_deleted(self, event):
         await self.send(text_data=json.dumps({"type": WSEvent.CHAT_STATE_DELETED, "payload": event["payload"]}))
-
         await self.leave_chat_group(event)
+
+    async def chat_updated(self, event):
+        await self.send(text_data=json.dumps({"type": WSEvent.CHAT_STATE_UPDATED, "payload": event["payload"]}))
 
     async def chat_message_new(self, event):
         await self.send(text_data=json.dumps({"type": WSEvent.CHAT_MESSAGE_NEW, "payload": event["payload"]}))
